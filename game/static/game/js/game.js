@@ -238,12 +238,89 @@ function markSurrounding(grid,cells){
 }
 function checkWin(ships){return ships.every(s=>s.hits===s.size);}
 
+// --- Probability density solver (плотность вероятности) ---
+function getRemainingShipSizes(){
+  return playerShips.filter(s=>s.hits<s.size).map(s=>s.size);
+}
+function getActiveHits(grid){
+  const hits=[];
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(grid[r][c]===3)hits.push([r,c]);
+  return hits;
+}
+function placementCovers(shipR,shipC,size,vertical,targetR,targetC){
+  for(let i=0;i<size;i++){
+    const nr=vertical?shipR+i:shipR;
+    const nc=vertical?shipC:shipC+i;
+    if(nr===targetR&&nc===targetC)return true;
+  }
+  return false;
+}
+function canPlaceShipForDensity(grid,shipR,shipC,size,vertical,activeHits){
+  const cells=[];
+  for(let i=0;i<size;i++){
+    const nr=vertical?shipR+i:shipR;
+    const nc=vertical?shipC:shipC+i;
+    if(nr>=SIZE||nc>=SIZE)return false;
+    const v=grid[nr][nc];
+    if(v===2||v===4)return false;
+    if(v!==0&&v!==3)return false;
+    cells.push([nr,nc]);
+  }
+  if(activeHits.length===0)return true;
+  return activeHits.every(([hr,hc])=>cells.some(([nr,nc])=>nr===hr&&nc===hc));
+}
+function countPlacementsCoveringCell(grid,targetR,targetC,shipSize,activeHits){
+  let count=0;
+  for(const vertical of [false,true]){
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        if(!placementCovers(r,c,shipSize,vertical,targetR,targetC))continue;
+        if(canPlaceShipForDensity(grid,r,c,shipSize,vertical,activeHits))count++;
+      }
+    }
+  }
+  return count;
+}
+function probabilityDensityAt(grid,r,c,remainingSizes,activeHits){
+  let density=0;
+  for(const size of remainingSizes){
+    density+=countPlacementsCoveringCell(grid,r,c,size,activeHits);
+  }
+  return density;
+}
+function gridSearchStepForLargestShip(largestSize){
+  return Math.max(1,largestSize);
+}
+function gridSearchBonus(r,c,largestSize){
+  const step=gridSearchStepForLargestShip(largestSize);
+  return (r%step===0&&c%step===0)?1:0;
+}
+function chooseProbabilityDensityShot(grid=playerGrid,shotSet=aiShotSet){
+  const available=availableCellsForGrid(grid,shotSet);
+  if(available.length===0)return [undefined,undefined];
+  const remainingSizes=getRemainingShipSizes();
+  if(remainingSizes.length===0)return [available[0][0],available[0][1]];
+  const activeHits=getActiveHits(grid);
+  const largestSize=Math.max(...remainingSizes);
+  const useGridSearch=activeHits.length===0;
+  let best=available[0],bestScore=-Infinity;
+  available.forEach(([r,c])=>{
+    let score=probabilityDensityAt(grid,r,c,remainingSizes,activeHits);
+    if(useGridSearch)score+=gridSearchBonus(r,c,largestSize)*1000;
+    if(score>bestScore){bestScore=score;best=[r,c];}
+  });
+  return best;
+}
+
 // --- AI Turn ---
 function aiTurn(){
   if(phase!=='battle')return;
   let r,c;
   if(aiStrategy==='custom'){
     [r,c]=chooseCustomShot();
+  }
+  if(r===undefined&&aiStrategy==='probability'){
+    [r,c]=chooseProbabilityDensityShot();
   }
   if(r===undefined&&aiStrategy==='hunter'&&aiHuntQueue.length>0){
     while(aiHuntQueue.length>0){
@@ -351,6 +428,7 @@ const stratDescriptions={
   random:`<strong>Случайный алгоритм:</strong> Компьютер выбирает случайную клетку из ещё не обстрелянных. Аналог линейного поиска в случайном порядке по массиву. Сложность: O(n²) в худшем случае.`,
   checkerboard:`<strong>Шахматный алгоритм:</strong> Стреляет только в клетки с чётной суммой координат (r+c)%2==0. Основан на эвристике: корабли минимум 1 клетка, значит достаточно проверить половину поля. Аналог оптимизации перебора.`,
   hunter:`<strong>Охотник (BFS):</strong> При попадании добавляет соседние клетки в очередь и проверяет их. Это аналог алгоритма поиска в ширину (BFS). При промахе — переходит к случайному выстрелу. Наиболее эффективная стратегия.`,
+  probability:`<strong>Решатель (плотность вероятности):</strong> Для каждой клетки считает, сколькими способами туда может встать оставшийся корабль. Стреляет в клетку с максимальной плотностью; до первого попадания дополнительно использует сетку с шагом по размеру самого большого корабля.`,
   custom:`<strong>Пользовательская стратегия:</strong> Противник выбирает клетку по вашей функции оценки: база стратегии, чётность, приоритет соседей после попадания, вес центра и случайность. Перед применением стратегия проходит тесты.`
 };
 document.querySelectorAll('.strategy-btn').forEach(btn=>{
