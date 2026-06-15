@@ -8,11 +8,24 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-morskoy-boy-edu-game-2026-secret-key'
+IS_VERCEL = os.environ.get('VERCEL') == '1'
 
-DEBUG = True
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-morskoy-boy-edu-game-2026-secret-key',
+)
 
-ALLOWED_HOSTS = ['*']
+DEBUG = os.environ.get('DEBUG', 'false' if IS_VERCEL else 'true').lower() == 'true'
+
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app']
+if os.environ.get('VERCEL_URL'):
+    ALLOWED_HOSTS.append(os.environ['VERCEL_URL'])
+
+CSRF_TRUSTED_ORIGINS = []
+for env_key in ('VERCEL_URL', 'VERCEL_BRANCH_URL', 'VERCEL_PROJECT_PRODUCTION_URL'):
+    host = os.environ.get(env_key, '').strip()
+    if host:
+        CSRF_TRUSTED_ORIGINS.append(f'https://{host}')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -26,6 +39,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -56,12 +70,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'morskoy_boy.wsgi.application'
 
+DB_PATH = os.environ.get('DATABASE_PATH')
+if not DB_PATH:
+    DB_PATH = '/tmp/db.sqlite3' if IS_VERCEL else str(BASE_DIR / 'db.sqlite3')
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DB_PATH,
     }
 }
+
+if IS_VERCEL:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 AUTH_PASSWORD_VALIDATORS = []
 
@@ -72,5 +94,14 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
