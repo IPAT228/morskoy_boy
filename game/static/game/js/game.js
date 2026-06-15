@@ -261,6 +261,13 @@ function checkWin(ships){return ships.every(s=>s.hits===s.size);}
 // --- Probability density solver (плотность вероятности) ---
 // Hunt: parity-сетка по размеру крупнейшего оставшегося корабля (DataGenetics).
 // Target: добивание по линии попаданий + плотность размещений через известные hit.
+function getAiKnowledgeGrid(grid,shotSet){
+  const view=makeGrid();
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    view[r][c]=shotSet.has(r+','+c)?grid[r][c]:0;
+  }
+  return view;
+}
 function getRemainingShipSizes(){
   return playerShips.filter(s=>s.hits<s.size).map(s=>s.size);
 }
@@ -391,23 +398,24 @@ function pickBestProbabilityCell(candidates,grid,remainingSizes,activeHits,clust
   return best;
 }
 function chooseProbabilityDensityShot(grid=playerGrid,shotSet=aiShotSet){
+  const knowledgeGrid=getAiKnowledgeGrid(grid,shotSet);
   const remainingSizes=getRemainingShipSizes();
   let available=availableCellsForGrid(grid,shotSet);
   if(available.length===0)return [undefined,undefined];
   if(remainingSizes.length===0)return [available[0][0],available[0][1]];
 
-  const allHits=getActiveHits(grid);
+  const allHits=getActiveHits(knowledgeGrid);
   const cluster=getPrimaryHitCluster(allHits);
 
   if(cluster.length>0){
-    const lineEnds=getLineEndTargets(grid,shotSet,cluster);
-    let candidates=lineEnds.length>0?lineEnds:adjacentHitTargets(grid,shotSet);
+    const lineEnds=getLineEndTargets(knowledgeGrid,shotSet,cluster);
+    let candidates=lineEnds.length>0?lineEnds:adjacentHitTargets(knowledgeGrid,shotSet);
     if(candidates.length===0)candidates=available;
-    return pickBestProbabilityCell(candidates,grid,remainingSizes,cluster,cluster);
+    return pickBestProbabilityCell(candidates,knowledgeGrid,remainingSizes,cluster,cluster);
   }
 
   const parityStep=getHuntParityStep(remainingSizes);
-  return pickBestProbabilityCell(available,grid,remainingSizes,[],[],parityStep);
+  return pickBestProbabilityCell(available,knowledgeGrid,remainingSizes,[],[],parityStep);
 }
 
 // --- AI Turn ---
