@@ -307,6 +307,7 @@ function canPlaceShipForDensity(grid,shipR,shipC,size,vertical,activeHits){
     if(nr>=SIZE||nc>=SIZE)return false;
     const v=grid[nr][nc];
     if(v===2||v===4)return false;
+    if(v===3&&activeHits.length===0)return false;
     if(v!==0&&v!==3)return false;
     cells.push([nr,nc]);
   }
@@ -344,22 +345,48 @@ function inferLineDirection(cluster){
 function targetCellBonus(r,c,cluster){
   if(cluster.length===0)return 0;
   const dir=inferLineDirection(cluster);
-  if(dir==='h'&&r===cluster[0][0])return 80;
-  if(dir==='v'&&c===cluster[0][1])return 80;
+  if(dir==='h'&&r===cluster[0][0])return 200;
+  if(dir==='v'&&c===cluster[0][1])return 200;
   if(cluster.length===1){
     const [hr,hc]=cluster[0];
-    if(Math.abs(r-hr)+Math.abs(c-hc)===1)return 40;
+    if(Math.abs(r-hr)+Math.abs(c-hc)===1)return 120;
   }
   return 0;
 }
-function pickBestProbabilityCell(candidates,grid,remainingSizes,activeHits,cluster){
+function getLineEndTargets(grid,shotSet,cluster){
+  const dir=inferLineDirection(cluster);
+  if(dir==='h'){
+    const row=cluster[0][0];
+    const cols=cluster.map(([,c])=>c);
+    const minC=Math.min(...cols)-1, maxC=Math.max(...cols)+1;
+    return [[row,minC],[row,maxC]].filter(([r,c])=>
+      c>=0&&c<SIZE&&!shotSet.has(r+','+c)&&grid[r][c]!==2&&grid[r][c]!==3&&grid[r][c]!==4);
+  }
+  if(dir==='v'){
+    const col=cluster[0][1];
+    const rows=cluster.map(([r])=>r);
+    const minR=Math.min(...rows)-1, maxR=Math.max(...rows)+1;
+    return [[minR,col],[maxR,col]].filter(([r,c])=>
+      r>=0&&r<SIZE&&!shotSet.has(r+','+c)&&grid[r][c]!==2&&grid[r][c]!==3&&grid[r][c]!==4);
+  }
+  return [];
+}
+function pickBestProbabilityCell(candidates,grid,remainingSizes,activeHits,cluster,huntStep=0){
   let best=candidates[0],bestScore=-Infinity;
   candidates.forEach(([r,c])=>{
     let score=probabilityDensityAt(grid,r,c,remainingSizes,activeHits);
-    score+=centerWeight(r,c)*0.4;
-    if(cluster.length>0)score+=targetCellBonus(r,c,cluster);
-    score+=Math.random()*0.001;
+    score+=centerWeight(r,c)*0.8;
+    if(cluster.length>0){
+      score+=targetCellBonus(r,c,cluster);
+    }else if(huntStep>0&&isHuntParityCell(r,c,huntStep)){
+      score+=huntStep*18;
+    }
     if(score>bestScore){bestScore=score;best=[r,c];}
+    else if(score===bestScore){
+      const bestCenter=centerWeight(best[0],best[1]);
+      const cellCenter=centerWeight(r,c);
+      if(cellCenter>bestCenter)best=[r,c];
+    }
   });
   return best;
 }
@@ -373,27 +400,14 @@ function chooseProbabilityDensityShot(grid=playerGrid,shotSet=aiShotSet){
   const cluster=getPrimaryHitCluster(allHits);
 
   if(cluster.length>0){
-    const adjacent=adjacentHitTargets(grid,shotSet);
-    let candidates=adjacent;
-    if(candidates.length===0){
-      const dir=inferLineDirection(cluster);
-      if(dir==='h'){
-        const row=cluster[0][0];
-        candidates=available.filter(([r])=>r===row);
-      }else if(dir==='v'){
-        const col=cluster[0][1];
-        candidates=available.filter(([,c])=>c===col);
-      }else{
-        candidates=available;
-      }
-    }
+    const lineEnds=getLineEndTargets(grid,shotSet,cluster);
+    let candidates=lineEnds.length>0?lineEnds:adjacentHitTargets(grid,shotSet);
+    if(candidates.length===0)candidates=available;
     return pickBestProbabilityCell(candidates,grid,remainingSizes,cluster,cluster);
   }
 
   const parityStep=getHuntParityStep(remainingSizes);
-  const parityCells=available.filter(([r,c])=>isHuntParityCell(r,c,parityStep));
-  const candidates=parityCells.length>0?parityCells:available;
-  return pickBestProbabilityCell(candidates,grid,remainingSizes,[],[]);
+  return pickBestProbabilityCell(available,grid,remainingSizes,[],[],parityStep);
 }
 
 // --- AI Turn ---
@@ -422,12 +436,18 @@ function aiTurn(){
       }
     }
     if(r===undefined){
-      let avail=[];
-      for(let i=0;i<SIZE;i++)for(let j=0;j<SIZE;j++){
-        if(!aiShotSet.has(i+','+j))avail.push([i,j]);
+      if(aiStrategy==='probability'){
+        const avail=availableCellsForGrid(playerGrid,aiShotSet);
+        if(avail.length===0)return;
+        [r,c]=chooseProbabilityDensityShot();
+      }else{
+        let avail=[];
+        for(let i=0;i<SIZE;i++)for(let j=0;j<SIZE;j++){
+          if(!aiShotSet.has(i+','+j))avail.push([i,j]);
+        }
+        if(avail.length===0)return;
+        [r,c]=avail[Math.floor(Math.random()*avail.length)];
       }
-      if(avail.length===0)return;
-      [r,c]=avail[Math.floor(Math.random()*avail.length)];
     }
   }
   aiShotSet.add(r+','+c); stats.aShots++;
