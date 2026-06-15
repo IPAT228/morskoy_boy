@@ -259,6 +259,8 @@ function markSurrounding(grid,cells){
 function checkWin(ships){return ships.every(s=>s.hits===s.size);}
 
 // --- Probability density solver (плотность вероятности) ---
+// Hunt: parity-сетка по размеру крупнейшего оставшегося корабля (DataGenetics).
+// Target: добивание по линии попаданий + плотность размещений через известные hit.
 function getRemainingShipSizes(){
   return playerShips.filter(s=>s.hits<s.size).map(s=>s.size);
 }
@@ -266,6 +268,28 @@ function getActiveHits(grid){
   const hits=[];
   for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(grid[r][c]===3)hits.push([r,c]);
   return hits;
+}
+function getPrimaryHitCluster(hits){
+  if(hits.length===0)return [];
+  const hitSet=new Set(hits.map(([r,c])=>r+','+c));
+  const cluster=[],queue=[hits[0]],seen=new Set([hits[0][0]+','+hits[0][1]]);
+  while(queue.length){
+    const [r,c]=queue.shift();
+    cluster.push([r,c]);
+    [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([nr,nc])=>{
+      const key=nr+','+nc;
+      if(hitSet.has(key)&&!seen.has(key)){seen.add(key);queue.push([nr,nc]);}
+    });
+  }
+  return cluster;
+}
+function getHuntParityStep(remainingSizes){
+  if(remainingSizes.length===0)return 2;
+  const largest=Math.max(...remainingSizes);
+  return largest>=2?largest:2;
+}
+function isHuntParityCell(r,c,step){
+  return (r+c)%step===0;
 }
 function placementCovers(shipR,shipC,size,vertical,targetR,targetC){
   for(let i=0;i<size;i++){
@@ -308,28 +332,68 @@ function probabilityDensityAt(grid,r,c,remainingSizes,activeHits){
   }
   return density;
 }
-function gridSearchStepForLargestShip(largestSize){
-  return Math.max(1,largestSize);
+function centerWeight(r,c){
+  return 9-(Math.abs(r-4.5)+Math.abs(c-4.5));
 }
-function gridSearchBonus(r,c,largestSize){
-  const step=gridSearchStepForLargestShip(largestSize);
-  return (r%step===0&&c%step===0)?1:0;
+function inferLineDirection(cluster){
+  if(cluster.length<2)return null;
+  if(cluster.every(([r])=>r===cluster[0][0]))return 'h';
+  if(cluster.every(([,c])=>c===cluster[0][1]))return 'v';
+  return null;
 }
-function chooseProbabilityDensityShot(grid=playerGrid,shotSet=aiShotSet){
-  const available=availableCellsForGrid(grid,shotSet);
-  if(available.length===0)return [undefined,undefined];
-  const remainingSizes=getRemainingShipSizes();
-  if(remainingSizes.length===0)return [available[0][0],available[0][1]];
-  const activeHits=getActiveHits(grid);
-  const largestSize=Math.max(...remainingSizes);
-  const useGridSearch=activeHits.length===0;
-  let best=available[0],bestScore=-Infinity;
-  available.forEach(([r,c])=>{
+function targetCellBonus(r,c,cluster){
+  if(cluster.length===0)return 0;
+  const dir=inferLineDirection(cluster);
+  if(dir==='h'&&r===cluster[0][0])return 80;
+  if(dir==='v'&&c===cluster[0][1])return 80;
+  if(cluster.length===1){
+    const [hr,hc]=cluster[0];
+    if(Math.abs(r-hr)+Math.abs(c-hc)===1)return 40;
+  }
+  return 0;
+}
+function pickBestProbabilityCell(candidates,grid,remainingSizes,activeHits,cluster){
+  let best=candidates[0],bestScore=-Infinity;
+  candidates.forEach(([r,c])=>{
     let score=probabilityDensityAt(grid,r,c,remainingSizes,activeHits);
-    if(useGridSearch)score+=gridSearchBonus(r,c,largestSize)*1000;
+    score+=centerWeight(r,c)*0.4;
+    if(cluster.length>0)score+=targetCellBonus(r,c,cluster);
+    score+=Math.random()*0.001;
     if(score>bestScore){bestScore=score;best=[r,c];}
   });
   return best;
+}
+function chooseProbabilityDensityShot(grid=playerGrid,shotSet=aiShotSet){
+  const remainingSizes=getRemainingShipSizes();
+  let available=availableCellsForGrid(grid,shotSet);
+  if(available.length===0)return [undefined,undefined];
+  if(remainingSizes.length===0)return [available[0][0],available[0][1]];
+
+  const allHits=getActiveHits(grid);
+  const cluster=getPrimaryHitCluster(allHits);
+
+  if(cluster.length>0){
+    const adjacent=adjacentHitTargets(grid,shotSet);
+    let candidates=adjacent;
+    if(candidates.length===0){
+      const dir=inferLineDirection(cluster);
+      if(dir==='h'){
+        const row=cluster[0][0];
+        candidates=available.filter(([r])=>r===row);
+      }else if(dir==='v'){
+        const col=cluster[0][1];
+        candidates=available.filter(([,c])=>c===col);
+      }else{
+        candidates=available;
+      }
+    }
+    return pickBestProbabilityCell(candidates,grid,remainingSizes,cluster,cluster);
+  }
+
+  const parityStep=getHuntParityStep(remainingSizes);
+  const parityCells=available.filter(([r,c])=>isHuntParityCell(r,c,parityStep));
+  const candidates=parityCells.length>0?parityCells:available;
+  return pickBestProbabilityCell(candidates,grid,remainingSizes,[],[]);
 }
 
 // --- AI Turn ---
@@ -448,7 +512,7 @@ const stratDescriptions={
   random:`<strong>Случайный алгоритм:</strong> Компьютер выбирает случайную клетку из ещё не обстрелянных. Аналог линейного поиска в случайном порядке по массиву. Сложность: O(n²) в худшем случае.`,
   checkerboard:`<strong>Шахматный алгоритм:</strong> Стреляет только в клетки с чётной суммой координат (r+c)%2==0. Основан на эвристике: корабли минимум 1 клетка, значит достаточно проверить половину поля. Аналог оптимизации перебора.`,
   hunter:`<strong>Охотник (BFS):</strong> При попадании добавляет соседние клетки в очередь и проверяет их. Это аналог алгоритма поиска в ширину (BFS). При промахе — переходит к случайному выстрелу. Наиболее эффективная стратегия.`,
-  probability:`<strong>Решатель (плотность вероятности):</strong> Для каждой клетки считает, сколькими способами туда может встать оставшийся корабль. Стреляет в клетку с максимальной плотностью; до первого попадания дополнительно использует сетку с шагом по размеру самого большого корабля.`,
+  probability:`<strong>Решатель (плотность вероятности):</strong> Считает, сколькими способами оставшиеся корабли могут занять каждую клетку. В режиме поиска стреляет по parity-сетке с шагом крупнейшего корабля (4→3→2), после попадания добивает корабль по линии.`,
   custom:`<strong>Пользовательская стратегия:</strong> Противник выбирает клетку по вашей функции оценки: база стратегии, чётность, приоритет соседей после попадания, вес центра и случайность. Перед применением стратегия проходит тесты.`
 };
 document.querySelectorAll('.strategy-btn').forEach(btn=>{
