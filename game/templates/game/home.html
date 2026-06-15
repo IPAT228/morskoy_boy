@@ -81,15 +81,15 @@
                     {% csrf_token %}
                     <label>
                         Имя пользователя
-                        <input type="text" name="username" placeholder="Например: player1" required>
+                        <input type="text" name="username" placeholder="Например: player1" minlength="3" maxlength="150" required>
                     </label>
                     <label>
                         Пароль
-                        <input type="password" name="password" placeholder="Введите пароль" required>
+                        <input type="password" name="password" placeholder="Введите пароль" minlength="4" required>
                     </label>
                     <label>
                         Повторите пароль
-                        <input type="password" name="password_confirm" placeholder="Повторите пароль" required>
+                        <input type="password" name="password_confirm" placeholder="Повторите пароль" minlength="4" required>
                     </label>
                     <button class="btn btn-primary full-width" type="submit">Зарегистрироваться и играть</button>
                 </form>

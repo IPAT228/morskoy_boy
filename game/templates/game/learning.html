@@ -18,6 +18,14 @@
             <a class="game-home-link" href="{% url 'game:rules' %}">Правила</a>
         </div>
 
+        {% if messages %}
+            <div class="form-messages learning-messages">
+                {% for message in messages %}
+                    <div class="form-message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <div class="learning-header">
             <div>
                 <div class="card-title">📚 Обучающий материал перед игрой</div>
