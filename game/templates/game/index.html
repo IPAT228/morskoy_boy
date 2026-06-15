@@ -25,6 +25,9 @@
                 {% endif %}
             </strong>
         </div>
+        {% if user.is_authenticated %}
+            <a class="game-home-link" href="{% url 'game:stats' %}">Статистика</a>
+        {% endif %}
     </div>
     <h1>⚓ Морской Бой</h1>
     <p class="subtitle">Обучающая игра по информатике — алгоритмы, массивы и Python</p>

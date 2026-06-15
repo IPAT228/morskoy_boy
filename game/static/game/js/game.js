@@ -760,16 +760,19 @@ function endGame(winner){
         const e=document.getElementById('pmExplanation');
         e.textContent=(correct?'✅ ':'❌ ')+pmQ.explanation;
         e.classList.add('visible');
+        saveSession(winner);
       });
       optEl.appendChild(btn);
     });
   } else pm.classList.add('hidden');
   modal.classList.remove('hidden');
-  saveSession(winner);
+  if(!pmQ)saveSession(winner);
 }
 function saveSession(winner){
   fetch('/api/save-session/',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ai_strategy:aiStrategy,player_shots:stats.pShots,ai_shots:stats.aShots,
+    credentials:'same-origin',
+    body:JSON.stringify({ai_strategy:aiStrategy,question_category:selectedQuestionCategory,
+      player_shots:stats.pShots,ai_shots:stats.aShots,
       player_hits:stats.pHits,ai_hits:stats.aHits,winner,
       questions_answered:stats.qAnswered,questions_correct:stats.qCorrect})
   }).catch(()=>{});

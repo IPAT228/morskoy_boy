@@ -23,7 +23,7 @@ class QuestionAdmin(admin.ModelAdmin):
 @admin.register(GameSession)
 class GameSessionAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'started_at', 'ai_strategy', 'winner',
+        'id', 'user', 'started_at', 'ai_strategy', 'winner',
         'player_shots', 'player_hits', 'questions_correct',
     )
-    list_filter = ('winner', 'ai_strategy')
+    list_filter = ('winner', 'ai_strategy', 'user')

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -70,9 +71,18 @@ class Question(models.Model):
 
 class GameSession(models.Model):
     """Запись об игровой сессии"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='game_sessions',
+        null=True,
+        blank=True,
+        verbose_name='Игрок',
+    )
     started_at = models.DateTimeField('Начало', auto_now_add=True)
     finished_at = models.DateTimeField('Окончание', null=True, blank=True)
     ai_strategy = models.CharField('Стратегия ИИ', max_length=30, default='random')
+    question_category = models.CharField('Категория вопросов', max_length=100, blank=True)
     player_shots = models.IntegerField('Выстрелов игрока', default=0)
     ai_shots = models.IntegerField('Выстрелов ИИ', default=0)
     player_hits = models.IntegerField('Попаданий игрока', default=0)
@@ -92,4 +102,17 @@ class GameSession(models.Model):
         ordering = ['-started_at']
 
     def __str__(self):
-        return f'Сессия #{self.pk} ({self.started_at:%d.%m.%Y %H:%M})'
+        owner = self.user.username if self.user_id else 'Гость'
+        return f'Сессия #{self.pk} — {owner} ({self.started_at:%d.%m.%Y %H:%M})'
+
+    @property
+    def player_accuracy(self):
+        if not self.player_shots:
+            return 0
+        return round(self.player_hits / self.player_shots * 100)
+
+    @property
+    def quiz_accuracy(self):
+        if not self.questions_answered:
+            return 0
+        return round(self.questions_correct / self.questions_answered * 100)

@@ -3,13 +3,24 @@ import random
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.db.models import Avg, Count, Sum
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from .models import Question, GameSession
+
+STRATEGY_LABELS = {
+    'random': 'Случайный',
+    'checkerboard': 'Шахматный',
+    'hunter': 'Охотник',
+    'probability': 'Решатель',
+    'custom': 'Пользовательский',
+}
 
 
 def home(request):
@@ -81,6 +92,101 @@ def index(request):
     return render(request, 'game/index.html')
 
 
+def _build_player_stats(user):
+    sessions = GameSession.objects.filter(user=user)
+    total = sessions.count()
+    empty = {
+        'total_games': 0,
+        'player_wins': 0,
+        'ai_wins': 0,
+        'win_rate': 0,
+        'avg_player_shots': 0,
+        'avg_player_hits': 0,
+        'avg_player_accuracy': 0,
+        'avg_ai_shots': 0,
+        'avg_ai_hits': 0,
+        'total_questions_answered': 0,
+        'total_questions_correct': 0,
+        'quiz_accuracy': 0,
+        'strategy_breakdown': [],
+        'recent_sessions': [],
+    }
+    if total == 0:
+        return empty
+
+    player_wins = sessions.filter(winner='player').count()
+    ai_wins = sessions.filter(winner='ai').count()
+    aggregates = sessions.aggregate(
+        avg_player_shots=Avg('player_shots'),
+        avg_player_hits=Avg('player_hits'),
+        avg_ai_shots=Avg('ai_shots'),
+        avg_ai_hits=Avg('ai_hits'),
+        total_questions_answered=Sum('questions_answered'),
+        total_questions_correct=Sum('questions_correct'),
+    )
+
+    total_shots = sessions.aggregate(total=Sum('player_shots'))['total'] or 0
+    total_hits = sessions.aggregate(total=Sum('player_hits'))['total'] or 0
+    avg_accuracy = round(total_hits / total_shots * 100, 1) if total_shots else 0
+
+    answered = aggregates['total_questions_answered'] or 0
+    correct = aggregates['total_questions_correct'] or 0
+    quiz_accuracy = round(correct / answered * 100, 1) if answered else 0
+
+    strategy_breakdown = []
+    for row in sessions.values('ai_strategy').annotate(count=Count('id')).order_by('-count'):
+        strategy = row['ai_strategy']
+        strategy_breakdown.append({
+            'strategy': strategy,
+            'label': STRATEGY_LABELS.get(strategy, strategy),
+            'count': row['count'],
+            'wins': sessions.filter(ai_strategy=strategy, winner='player').count(),
+        })
+
+    recent_sessions = []
+    for session in sessions.select_related('user')[:20]:
+        recent_sessions.append({
+            'id': session.pk,
+            'date': session.started_at,
+            'winner': session.winner,
+            'winner_label': 'Победа' if session.winner == 'player' else 'Поражение',
+            'ai_strategy': STRATEGY_LABELS.get(session.ai_strategy, session.ai_strategy),
+            'question_category': session.question_category or '—',
+            'player_shots': session.player_shots,
+            'player_hits': session.player_hits,
+            'player_accuracy': session.player_accuracy,
+            'quiz_score': f'{session.questions_correct}/{session.questions_answered}',
+            'quiz_accuracy': session.quiz_accuracy,
+        })
+
+    return {
+        'total_games': total,
+        'player_wins': player_wins,
+        'ai_wins': ai_wins,
+        'win_rate': round(player_wins / total * 100, 1) if total else 0,
+        'avg_player_shots': round(aggregates['avg_player_shots'] or 0, 1),
+        'avg_player_hits': round(aggregates['avg_player_hits'] or 0, 1),
+        'avg_player_accuracy': avg_accuracy,
+        'avg_ai_shots': round(aggregates['avg_ai_shots'] or 0, 1),
+        'avg_ai_hits': round(aggregates['avg_ai_hits'] or 0, 1),
+        'total_questions_answered': answered,
+        'total_questions_correct': correct,
+        'quiz_accuracy': quiz_accuracy,
+        'strategy_breakdown': strategy_breakdown,
+        'recent_sessions': recent_sessions,
+    }
+
+
+@login_required(login_url='game:home')
+def player_stats(request):
+    """Личная статистика залогиненного игрока"""
+    stats = _build_player_stats(request.user)
+    return render(request, 'game/stats.html', {
+        'stats': stats,
+        'strategy_labels': STRATEGY_LABELS,
+    })
+
+
 @require_GET
 def api_questions(request):
     """Получить вопросы по фазе и/или сложности"""
@@ -114,7 +220,10 @@ def api_save_session(request):
     try:
         data = json.loads(request.body)
         session = GameSession.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            finished_at=timezone.now(),
             ai_strategy=data.get('ai_strategy', 'random'),
+            question_category=data.get('question_category', ''),
             player_shots=data.get('player_shots', 0),
             ai_shots=data.get('ai_shots', 0),
             player_hits=data.get('player_hits', 0),
@@ -130,7 +239,11 @@ def api_save_session(request):
 
 @require_GET
 def api_stats(request):
-    """Статистика по всем сессиям"""
+    """Статистика по сессиям (личная для авторизованных, общая для гостей)"""
+    if request.user.is_authenticated:
+        stats = _build_player_stats(request.user)
+        return JsonResponse(stats)
+
     sessions = GameSession.objects.all()
     total = sessions.count()
     if total == 0:
@@ -144,8 +257,6 @@ def api_stats(request):
 
     player_wins = sessions.filter(winner='player').count()
     ai_wins = sessions.filter(winner='ai').count()
-
-    from django.db.models import Avg
     avg_shots = sessions.aggregate(avg=Avg('player_shots'))['avg'] or 0
     avg_correct = sessions.aggregate(avg=Avg('questions_correct'))['avg'] or 0
 

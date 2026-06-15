@@ -1,0 +1,160 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Личная статистика игрока в обучающей игре Морской бой">
+    <title>Морской Бой — моя статистика</title>
+    <link rel="stylesheet" href="{% static 'game/css/style.css' %}?v={{ STATIC_VERSION }}">
+    <script src="{% static 'game/js/theme.js' %}?v={{ STATIC_VERSION }}"></script>
+</head>
+<body>
+<main class="stats-page">
+    <section class="glass-card stats-page-card">
+        <div class="game-top-panel glass-card">
+            <a class="game-home-link" href="{% url 'game:home' %}">← На главную</a>
+            <button class="theme-toggle-btn game-theme-toggle" type="button" data-theme-toggle aria-label="Включить светлую тему">☀</button>
+            <a class="game-home-link" href="{% url 'game:learning' %}">К игре</a>
+        </div>
+
+        <div class="stats-header">
+            <div>
+                <div class="card-title">📊 Личная статистика</div>
+                <h1>{{ user.username }}</h1>
+            </div>
+            <p class="stats-intro">
+                Здесь собраны результаты ваших партий: победы и поражения, точность выстрелов и успехи в тестах по информатике.
+            </p>
+        </div>
+
+        {% if stats.total_games == 0 %}
+            <div class="stats-empty">
+                <div class="stats-empty-icon">🚢</div>
+                <h2>Пока нет сыгранных партий</h2>
+                <p>Сыграйте хотя бы одну игру под своим аккаунтом — статистика появится автоматически после завершения боя.</p>
+                <a class="btn btn-primary" href="{% url 'game:learning' %}">Начать игру</a>
+            </div>
+        {% else %}
+            <div class="stats-summary-grid">
+                <article class="stats-summary-card">
+                    <div class="stats-summary-value">{{ stats.total_games }}</div>
+                    <div class="stats-summary-label">Всего партий</div>
+                </article>
+                <article class="stats-summary-card stats-win">
+                    <div class="stats-summary-value">{{ stats.player_wins }}</div>
+                    <div class="stats-summary-label">Побед</div>
+                </article>
+                <article class="stats-summary-card stats-loss">
+                    <div class="stats-summary-value">{{ stats.ai_wins }}</div>
+                    <div class="stats-summary-label">Поражений</div>
+                </article>
+                <article class="stats-summary-card">
+                    <div class="stats-summary-value">{{ stats.win_rate }}%</div>
+                    <div class="stats-summary-label">Процент побед</div>
+                </article>
+            </div>
+
+            <div class="stats-sections">
+                <section class="stats-section glass-card">
+                    <div class="card-title">⚔️ Боевая статистика</div>
+                    <div class="stats-detail-grid">
+                        <div class="stats-detail-item">
+                            <span class="stats-detail-label">Среднее выстрелов за партию</span>
+                            <strong>{{ stats.avg_player_shots }}</strong>
+                        </div>
+                        <div class="stats-detail-item">
+                            <span class="stats-detail-label">Среднее попаданий за партию</span>
+                            <strong>{{ stats.avg_player_hits }}</strong>
+                        </div>
+                        <div class="stats-detail-item">
+                            <span class="stats-detail-label">Средняя точность</span>
+                            <strong>{{ stats.avg_player_accuracy }}%</strong>
+                        </div>
+                        <div class="stats-detail-item">
+                            <span class="stats-detail-label">Среднее выстрелов противника</span>
+                            <strong>{{ stats.avg_ai_shots }}</strong>
+                        </div>
+                        <div class="stats-detail-item">
+                            <span class="stats-detail-label">Среднее попаданий противника</span>
+                            <strong>{{ stats.avg_ai_hits }}</strong>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="stats-section glass-card">
+                    <div class="card-title">📝 Тесты по информатике</div>
+                    <div class="stats-detail-grid">
+                        <div class="stats-detail-item">
+                            <span class="stats-detail-label">Всего ответов</span>
+                            <strong>{{ stats.total_questions_answered }}</strong>
+                        </div>
+                        <div class="stats-detail-item">
+                            <span class="stats-detail-label">Правильных ответов</span>
+                            <strong>{{ stats.total_questions_correct }}</strong>
+                        </div>
+                        <div class="stats-detail-item">
+                            <span class="stats-detail-label">Точность в тестах</span>
+                            <strong>{{ stats.quiz_accuracy }}%</strong>
+                        </div>
+                    </div>
+                </section>
+
+                {% if stats.strategy_breakdown %}
+                <section class="stats-section glass-card">
+                    <div class="card-title">🤖 Противники по стратегиям</div>
+                    <div class="stats-strategy-list">
+                        {% for item in stats.strategy_breakdown %}
+                            <div class="stats-strategy-row">
+                                <div>
+                                    <strong>{{ item.label }}</strong>
+                                    <span>{{ item.count }} партий</span>
+                                </div>
+                                <div class="stats-strategy-wins">{{ item.wins }} побед</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endif %}
+            </div>
+
+            <section class="stats-section glass-card stats-history">
+                <div class="card-title">🕓 Последние партии</div>
+                <div class="stats-table-wrap">
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Результат</th>
+                                <th>Стратегия ИИ</th>
+                                <th>Тема</th>
+                                <th>Выстрелы</th>
+                                <th>Точность</th>
+                                <th>Тест</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in stats.recent_sessions %}
+                                <tr>
+                                    <td>{{ session.date|date:"d.m.Y H:i" }}</td>
+                                    <td>
+                                        <span class="stats-result {% if session.winner == 'player' %}win{% else %}loss{% endif %}">
+                                            {{ session.winner_label }}
+                                        </span>
+                                    </td>
+                                    <td>{{ session.ai_strategy }}</td>
+                                    <td>{{ session.question_category }}</td>
+                                    <td>{{ session.player_hits }}/{{ session.player_shots }}</td>
+                                    <td>{{ session.player_accuracy }}%</td>
+                                    <td>{{ session.quiz_score }} ({{ session.quiz_accuracy }}%)</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        {% endif %}
+    </section>
+</main>
+</body>
+</html>
