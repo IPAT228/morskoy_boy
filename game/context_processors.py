@@ -7,4 +7,7 @@ def static_version(request):
     """Force fresh CSS/JS while developing the project."""
     if settings.DEBUG:
         return {'STATIC_VERSION': str(int(time.time()))}
-    return {'STATIC_VERSION': '1'}
+    import os
+    return {
+        'STATIC_VERSION': os.environ.get('VERCEL_GIT_COMMIT_SHA', 'learning-v2')[:12],
+    }
