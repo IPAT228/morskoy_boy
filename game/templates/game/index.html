@@ -94,6 +94,10 @@
                 <strong id="placementShipName">4-палубный корабль</strong> — нажмите на клетку
                 <div class="hint">Нажмите <kbd>R</kbd> или правую кнопку мыши для поворота</div>
             </div>
+            <div class="placement-controls" id="placementControls">
+                <button class="btn btn-success" id="btnAutoPlace" title="Автоматическая расстановка">🎲 Авто-расстановка</button>
+                <button class="btn btn-danger" id="btnResetPlacement" title="Очистить поле и расставить заново" disabled>🔄 Сбросить расстановку</button>
+            </div>
         </div>
 
         <!-- Center column: matrix + AI explanation + log -->
@@ -142,7 +146,6 @@
 
     <!-- Controls -->
     <div class="controls-bar">
-        <button class="btn btn-success" id="btnAutoPlace" title="Автоматическая расстановка">🎲 Авто-расстановка</button>
         <button class="btn btn-primary hidden" id="btnStartBattle">⚔️ Начать бой!</button>
         <button class="btn btn-danger hidden" id="btnNewGame">🔄 Новая игра</button>
     </div>

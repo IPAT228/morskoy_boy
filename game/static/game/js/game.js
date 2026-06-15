@@ -38,9 +38,7 @@ function init(){
   for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if((r+c)%2===0)aiCheckerCells.push([r,c]);
   shuffle(aiCheckerCells);
   renderBoards(); updateMatrix(); updateStats(); updatePhase();
-  document.getElementById('placementInfo').classList.remove('hidden');
-  document.getElementById('btnAutoPlace').classList.remove('hidden');
-  document.getElementById('btnStartBattle').classList.add('hidden');
+  updatePlacementUI();
   document.getElementById('btnNewGame').classList.add('hidden');
   document.getElementById('turnIndicator').textContent='';
   document.getElementById('logEntries').innerHTML='<div class="log-entry">Игра готова. Расставьте корабли!</div>';
@@ -135,22 +133,44 @@ function placeShipAt(r,c){
   if(!canPlace(playerGrid,r,c,size,placementVertical,[]))return;
   placeShip(playerGrid,playerShips,r,c,size,placementVertical);
   placementIdx++;
-  if(placementIdx<SHIPS.length){
-    document.getElementById('placementShipName').textContent=
-      `${SHIP_NAMES[SHIPS[placementIdx]]||SHIPS[placementIdx]+'-палубный'} корабль (${placementIdx+1}/${SHIPS.length})`;
-  } else {
-    document.getElementById('placementInfo').classList.add('hidden');
-    document.getElementById('btnStartBattle').classList.remove('hidden');
-    addLog('Все корабли расставлены!');
-  }
+  if(placementIdx>=SHIPS.length)addLog('Все корабли расставлены!');
+  updatePlacementUI();
   renderBoards();
+}
+function resetPlacement(){
+  if(phase!=='placement')return;
+  playerGrid=makeGrid(); playerShips=[];
+  placementIdx=0; placementVertical=false;
+  updatePlacementUI();
+  renderBoards();
+  addLog('Расстановка сброшена. Расставьте корабли заново.');
+}
+function updatePlacementUI(){
+  const controls=document.getElementById('placementControls');
+  const info=document.getElementById('placementInfo');
+  const allPlaced=placementIdx>=SHIPS.length;
+  if(phase==='placement'){
+    controls.classList.remove('hidden');
+    document.getElementById('btnResetPlacement').disabled=placementIdx===0;
+    if(allPlaced){
+      info.classList.add('hidden');
+      document.getElementById('btnStartBattle').classList.remove('hidden');
+    }else{
+      info.classList.remove('hidden');
+      document.getElementById('btnStartBattle').classList.add('hidden');
+      document.getElementById('placementShipName').textContent=
+        `${SHIP_NAMES[SHIPS[placementIdx]]||SHIPS[placementIdx]+'-палубный'} корабль (${placementIdx+1}/${SHIPS.length})`;
+    }
+  }else{
+    controls.classList.add('hidden');
+    info.classList.add('hidden');
+  }
 }
 function autoPlace(){
   playerGrid=makeGrid(); playerShips=[];
   placeShipsRandomly(playerGrid,playerShips);
   placementIdx=SHIPS.length;
-  document.getElementById('placementInfo').classList.add('hidden');
-  document.getElementById('btnStartBattle').classList.remove('hidden');
+  updatePlacementUI();
   renderBoards();
   addLog('Корабли расставлены автоматически.');
 }
@@ -178,7 +198,7 @@ function startBattle(){
   placeShipsRandomly(aiGrid,aiShips);
   phase='battle'; updatePhase();
   document.getElementById('btnStartBattle').classList.add('hidden');
-  document.getElementById('btnAutoPlace').classList.add('hidden');
+  updatePlacementUI();
   document.getElementById('btnNewGame').classList.remove('hidden');
   renderBoards(); updateMatrix();
   addLog('Бой начался! Стреляйте по полю противника.');
@@ -639,6 +659,15 @@ function maybeAskStrategyQuestion(newStrategy){
   if(!q)q=getQuestion('general');
   showQuiz(q,()=>switchStrategy(newStrategy));
 }
+function buildShuffledQuizOptions(q){
+  const options=['A','B','C','D'].map(letter=>({
+    sourceLetter:letter,
+    text:q['option_'+letter.toLowerCase()],
+    isCorrect:letter===q.correct_answer
+  }));
+  shuffle(options);
+  return options.map((opt,i)=>({...opt,displayLetter:'ABCD'[i]}));
+}
 function showQuiz(q,callback){
   const modal=document.getElementById('quizModal');
   const badge=document.getElementById('quizBadge');
@@ -649,14 +678,14 @@ function showQuiz(q,callback){
   const codeEl=document.getElementById('quizCodeBlock');
   if(q.code_snippet){codeEl.textContent=q.code_snippet;codeEl.classList.remove('hidden');}
   else codeEl.classList.add('hidden');
+  const shuffled=buildShuffledQuizOptions(q);
   const optEl=document.getElementById('quizOptions');
   optEl.innerHTML='';
-  ['A','B','C','D'].forEach(letter=>{
-    const key='option_'+letter.toLowerCase();
+  shuffled.forEach(opt=>{
     const btn=document.createElement('button');
     btn.className='option-btn';
-    btn.innerHTML=`<span class="option-letter">${letter}</span><span>${q[key]}</span>`;
-    btn.addEventListener('click',()=>answerQuiz(letter,q,callback));
+    btn.innerHTML=`<span class="option-letter">${opt.displayLetter}</span><span>${opt.text}</span>`;
+    btn.addEventListener('click',()=>answerQuiz(opt.sourceLetter,q,callback,shuffled));
     optEl.appendChild(btn);
   });
   document.getElementById('quizExplanation').classList.remove('visible');
@@ -664,17 +693,17 @@ function showQuiz(q,callback){
   document.getElementById('quizContinue').classList.add('hidden');
   modal.classList.remove('hidden');
 }
-function answerQuiz(letter,q,callback){
+function answerQuiz(selectedLetter,q,callback,shuffled){
   stats.qAnswered++;
-  const correct=letter===q.correct_answer;
+  const correct=selectedLetter===q.correct_answer;
   if(correct)stats.qCorrect++;
   updateStats();
   const btns=document.querySelectorAll('#quizOptions .option-btn');
   btns.forEach((btn,i)=>{
     btn.disabled=true;
-    const l='ABCD'[i];
-    if(l===q.correct_answer)btn.classList.add('correct');
-    else if(l===letter&&!correct)btn.classList.add('wrong');
+    const opt=shuffled[i];
+    if(opt.isCorrect)btn.classList.add('correct');
+    else if(opt.sourceLetter===selectedLetter&&!correct)btn.classList.add('wrong');
   });
   const expEl=document.getElementById('quizExplanation');
   expEl.textContent=(correct?'✅ Правильно! ':'❌ Неверно. ')+q.explanation;
@@ -712,22 +741,24 @@ function endGame(winner){
       <div class="options-list" id="pmOptions"></div>
       <div class="explanation-box" id="pmExplanation"></div>`;
     const optEl=document.getElementById('pmOptions');
-    ['A','B','C','D'].forEach(letter=>{
-      const key='option_'+letter.toLowerCase();
+    const shuffled=buildShuffledQuizOptions(pmQ);
+    shuffled.forEach(opt=>{
       const btn=document.createElement('button');
       btn.className='option-btn';
-      btn.innerHTML=`<span class="option-letter">${letter}</span><span>${pmQ[key]}</span>`;
+      btn.innerHTML=`<span class="option-letter">${opt.displayLetter}</span><span>${opt.text}</span>`;
       btn.addEventListener('click',()=>{
         stats.qAnswered++;
-        if(letter===pmQ.correct_answer)stats.qCorrect++;
+        const correct=opt.sourceLetter===pmQ.correct_answer;
+        if(correct)stats.qCorrect++;
         updateStats();
         document.querySelectorAll('#pmOptions .option-btn').forEach((b,i)=>{
           b.disabled=true;
-          if('ABCD'[i]===pmQ.correct_answer)b.classList.add('correct');
-          else if('ABCD'[i]===letter&&letter!==pmQ.correct_answer)b.classList.add('wrong');
+          const o=shuffled[i];
+          if(o.isCorrect)b.classList.add('correct');
+          else if(o.sourceLetter===opt.sourceLetter&&!correct)b.classList.add('wrong');
         });
         const e=document.getElementById('pmExplanation');
-        e.textContent=(letter===pmQ.correct_answer?'✅ ':'❌ ')+pmQ.explanation;
+        e.textContent=(correct?'✅ ':'❌ ')+pmQ.explanation;
         e.classList.add('visible');
       });
       optEl.appendChild(btn);
@@ -783,6 +814,7 @@ function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()
 
 // --- Event Listeners ---
 document.getElementById('btnAutoPlace').addEventListener('click',autoPlace);
+document.getElementById('btnResetPlacement').addEventListener('click',resetPlacement);
 document.getElementById('btnStartBattle').addEventListener('click',()=>{
   maybeAskQuestion('placement',startBattle);
 });
