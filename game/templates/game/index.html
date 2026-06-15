@@ -170,10 +170,10 @@
         </p>
 
         <div class="custom-logic-note">
-            Логика функции: противник перебирает все свободные клетки поля и для каждой рассчитывает score — числовую оценку
-            выгодности выстрела. На score влияют выбранная чётность, близость клетки к центру, соседство с уже найденным
-            попаданием и уровень случайности. После расчёта стратегия выбирает клетку с максимальным score. Перед сохранением
-            тесты проверяют, что функция возвращает допустимые координаты, не повторяет выстрелы и корректно реагирует на попадание.
+            Логика функции: для каждой свободной клетки считается score. В него входит <strong>плотность вероятности</strong>
+            (сколько способов там могут стоять оставшиеся корабли), а также ваши настройки: чётность, центр поля,
+            добивание после попадания и случайность. После попадания противник стреляет по концам линии корабля.
+            Перед сохранением тесты проверяют корректность координат и реакцию на попадание.
         </div>
 
         <div class="custom-strategy-toolbar">
@@ -190,7 +190,7 @@
                     <select id="customBaseMode">
                         <option value="weighted">Взвешенная оценка клеток</option>
                         <option value="checker">Шахматный шаблон</option>
-                        <option value="hunter">Охота после попадания</option>
+                        <option value="hunter" selected>Охота после попадания</option>
                     </select>
                     <span>Определяет, от какой логики отталкивается пользовательская стратегия.</span>
                 </label>
@@ -199,7 +199,7 @@
                     Чётность клеток
                     <select id="customParity">
                         <option value="any">Любые клетки</option>
-                        <option value="even">Только чётные (r + c) % 2 = 0</option>
+                        <option value="even" selected>Только чётные (r + c) % 2 = 0</option>
                         <option value="odd">Только нечётные (r + c) % 2 = 1</option>
                     </select>
                     <span>Позволяет имитировать шахматный обход поля.</span>
@@ -207,19 +207,25 @@
 
                 <label class="custom-field">
                     Приоритет соседей после попадания
-                    <input id="customHitPriority" type="number" min="0" max="20" step="1" value="8">
+                    <input id="customHitPriority" type="number" min="0" max="20" step="1" value="12">
                     <span>Чем выше значение, тем быстрее противник проверяет клетки рядом с уже найденным кораблём.</span>
                 </label>
 
                 <label class="custom-field">
                     Вес центра поля
-                    <input id="customCenterWeight" type="number" min="-10" max="10" step="1" value="2">
+                    <input id="customCenterWeight" type="number" min="-10" max="10" step="1" value="3">
                     <span>Положительное значение чаще выбирает центральные клетки, отрицательное — края.</span>
                 </label>
 
                 <label class="custom-field">
+                    Вес плотности вероятности
+                    <input id="customDensityWeight" type="number" min="0" max="20" step="1" value="12">
+                    <span>Главный параметр силы: учитывает, сколькими способами в клетку может встать корабль. 0 — отключить.</span>
+                </label>
+
+                <label class="custom-field">
                     Случайность
-                    <input id="customRandomness" type="number" min="0" max="10" step="1" value="3">
+                    <input id="customRandomness" type="number" min="0" max="10" step="1" value="1">
                     <span>Добавляет разброс, чтобы стратегия не стреляла всегда одинаково.</span>
                 </label>
             </section>
@@ -231,19 +237,20 @@
   <span class="code-keyword">let</span> score = <span class="code-number">0</span>;
   <span class="code-keyword">const</span> baseMode = <span class="code-param code-string" id="codeBaseMode">'weighted'</span>;
   <span class="code-keyword">const</span> parity = <span class="code-param code-string" id="codeParity">'any'</span>;
-  <span class="code-keyword">const</span> hitPriority = <span class="code-param code-number" id="codeHitPriority">8</span>;
-  <span class="code-keyword">const</span> centerWeight = <span class="code-param code-number" id="codeCenterWeight">2</span>;
-  <span class="code-keyword">const</span> randomness = <span class="code-param code-number" id="codeRandomness">3</span>;
+  <span class="code-keyword">const</span> hitPriority = <span class="code-param code-number" id="codeHitPriority">12</span>;
+  <span class="code-keyword">const</span> centerWeight = <span class="code-param code-number" id="codeCenterWeight">3</span>;
+  <span class="code-keyword">const</span> densityWeight = <span class="code-param code-number" id="codeDensityWeight">12</span>;
+  <span class="code-keyword">const</span> randomness = <span class="code-param code-number" id="codeRandomness">1</span>;
 
+  score += <span class="code-function">probabilityDensityAt</span>(grid, r, c) * densityWeight;
   <span class="code-keyword">if</span> (parity === <span class="code-string">'even'</span> &amp;&amp; (r + c) % <span class="code-number">2</span> !== <span class="code-number">0</span>) score -= <span class="code-number">8</span>;
   <span class="code-keyword">if</span> (parity === <span class="code-string">'odd'</span> &amp;&amp; (r + c) % <span class="code-number">2</span> !== <span class="code-number">1</span>) score -= <span class="code-number">8</span>;
   <span class="code-keyword">if</span> (baseMode === <span class="code-string">'checker'</span> &amp;&amp; (r + c) % <span class="code-number">2</span> === <span class="code-number">0</span>) score += <span class="code-number">4</span>;
 
-  <span class="code-keyword">const</span> centerDistance = Math.abs(r - <span class="code-number">4.5</span>) + Math.abs(c - <span class="code-number">4.5</span>);
   score += (<span class="code-number">9</span> - centerDistance) * centerWeight;
 
-  <span class="code-keyword">const</span> nearHit = <span class="code-function">adjacentHitTargets</span>(grid, shotSet).some(([nr, nc]) =&gt; nr === r &amp;&amp; nc === c);
   <span class="code-keyword">if</span> (nearHit) score += hitPriority * <span class="code-number">5</span>;
+  <span class="code-keyword">if</span> (onLineEnd) score += hitPriority * <span class="code-number">10</span>;
 
   score += Math.random() * randomness;
   <span class="code-keyword">return</span> score;

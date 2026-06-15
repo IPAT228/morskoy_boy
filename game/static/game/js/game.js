@@ -541,7 +541,7 @@ const stratDescriptions={
   checkerboard:`<strong>Шахматный алгоритм:</strong> Стреляет только в клетки с чётной суммой координат (r+c)%2==0. Основан на эвристике: корабли минимум 1 клетка, значит достаточно проверить половину поля. Аналог оптимизации перебора.`,
   hunter:`<strong>Охотник (BFS):</strong> При попадании добавляет соседние клетки в очередь и проверяет их. Это аналог алгоритма поиска в ширину (BFS). При промахе — переходит к случайному выстрелу. Наиболее эффективная стратегия.`,
   probability:`<strong>Решатель (плотность вероятности):</strong> Считает, сколькими способами оставшиеся корабли могут занять каждую клетку. В режиме поиска стреляет по parity-сетке с шагом крупнейшего корабля (4→3→2), после попадания добивает корабль по линии.`,
-  custom:`<strong>Пользовательская стратегия:</strong> Противник выбирает клетку по вашей функции оценки: база стратегии, чётность, приоритет соседей после попадания, вес центра и случайность. Перед применением стратегия проходит тесты.`
+  custom:`<strong>Пользовательская стратегия:</strong> Считает плотность вероятности для оставшихся кораблей и добавляет ваши настройки: чётность, центр, приоритет после попадания и случайность. После попадания добивает корабль по линии, как «Решатель».`
 };
 document.querySelectorAll('.strategy-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
@@ -560,7 +560,7 @@ function switchStrategy(s){
 
 // --- Custom Strategy Builder ---
 function loadCustomStrategyConfig(){
-  const defaults={baseMode:'weighted',parity:'any',hitPriority:8,centerWeight:2,randomness:3};
+  const defaults={baseMode:'hunter',parity:'even',hitPriority:12,centerWeight:3,densityWeight:12,randomness:1};
   try{
     return {...defaults,...JSON.parse(localStorage.getItem('customAiStrategy')||'{}')};
   }catch{
@@ -573,15 +573,17 @@ function getCustomFormConfig(){
     parity:document.getElementById('customParity').value,
     hitPriority:Number(document.getElementById('customHitPriority').value),
     centerWeight:Number(document.getElementById('customCenterWeight').value),
+    densityWeight:Number(document.getElementById('customDensityWeight').value),
     randomness:Number(document.getElementById('customRandomness').value),
   };
 }
 function setCustomFormConfig(config){
   document.getElementById('customBaseMode').value=config.baseMode||'weighted';
   document.getElementById('customParity').value=config.parity||'any';
-  document.getElementById('customHitPriority').value=String(config.hitPriority??8);
-  document.getElementById('customCenterWeight').value=String(config.centerWeight??2);
-  document.getElementById('customRandomness').value=String(config.randomness??3);
+  document.getElementById('customHitPriority').value=String(config.hitPriority??12);
+  document.getElementById('customCenterWeight').value=String(config.centerWeight??3);
+  document.getElementById('customDensityWeight').value=String(config.densityWeight??12);
+  document.getElementById('customRandomness').value=String(config.randomness??1);
 }
 function updateCustomCodePreview(){
   const config=getCustomFormConfig();
@@ -593,6 +595,7 @@ function updateCustomCodePreview(){
   setText('codeParity',`'${config.parity}'`);
   setText('codeHitPriority',String(config.hitPriority));
   setText('codeCenterWeight',String(config.centerWeight));
+  setText('codeDensityWeight',String(config.densityWeight));
   setText('codeRandomness',String(config.randomness));
 }
 function validateCustomConfig(config){
@@ -601,6 +604,7 @@ function validateCustomConfig(config){
   if(!['any','even','odd'].includes(config.parity))errors.push('Некорректная чётность клеток.');
   if(!Number.isFinite(config.hitPriority)||config.hitPriority<0||config.hitPriority>20)errors.push('Приоритет соседей должен быть от 0 до 20.');
   if(!Number.isFinite(config.centerWeight)||config.centerWeight<-10||config.centerWeight>10)errors.push('Вес центра должен быть от -10 до 10.');
+  if(!Number.isFinite(config.densityWeight)||config.densityWeight<0||config.densityWeight>20)errors.push('Вес плотности должен быть от 0 до 20.');
   if(!Number.isFinite(config.randomness)||config.randomness<0||config.randomness>10)errors.push('Случайность должна быть от 0 до 10.');
   return errors;
 }
@@ -636,16 +640,35 @@ function adjacentHitTargets(grid,shotSet){
   }
   return targets;
 }
-function scoreCustomCell(r,c,grid,shotSet,config){
+function buildCustomShotContext(grid,shotSet){
+  const knowledgeGrid=getAiKnowledgeGrid(grid,shotSet);
+  const hits=getActiveHits(knowledgeGrid);
+  const cluster=getPrimaryHitCluster(hits);
+  const remainingSizes=getRemainingShipSizes();
+  const parityStep=cluster.length===0?getHuntParityStep(remainingSizes):0;
+  return {knowledgeGrid,cluster,activeHits:cluster,remainingSizes,parityStep};
+}
+function scoreCustomCell(r,c,grid,shotSet,config,ctx){
+  if(!ctx)ctx=buildCustomShotContext(grid,shotSet);
   let score=0;
+  const densityWeight=config.densityWeight??12;
+  if(densityWeight>0){
+    score+=probabilityDensityAt(ctx.knowledgeGrid,r,c,ctx.remainingSizes,ctx.activeHits)*densityWeight;
+  }
   if(config.parity==='even'&&(r+c)%2!==0)score-=8;
   if(config.parity==='odd'&&(r+c)%2!==1)score-=8;
   if(config.baseMode==='checker'&&(r+c)%2===0)score+=4;
-  const centerDistance=Math.abs(r-4.5)+Math.abs(c-4.5);
-  score+=(9-centerDistance)*config.centerWeight;
+  if(ctx.cluster.length===0&&ctx.parityStep>0&&isHuntParityCell(r,c,ctx.parityStep)){
+    score+=ctx.parityStep*4;
+  }
+  score+=centerWeight(r,c)*config.centerWeight;
   if(config.baseMode==='hunter'||config.hitPriority>0){
-    const nearHit=adjacentHitTargets(grid,shotSet).some(([nr,nc])=>nr===r&&nc===c);
-    if(nearHit)score+=config.hitPriority*5;
+    if(ctx.cluster.length>0){
+      score+=targetCellBonus(r,c,ctx.cluster)*Math.max(config.hitPriority,4)/4;
+    }else{
+      const nearHit=adjacentHitTargets(ctx.knowledgeGrid,shotSet).some(([nr,nc])=>nr===r&&nc===c);
+      if(nearHit)score+=config.hitPriority*5;
+    }
   }
   score+=Math.random()*config.randomness;
   return score;
@@ -653,10 +676,19 @@ function scoreCustomCell(r,c,grid,shotSet,config){
 function chooseCustomShot(grid=playerGrid,shotSet=aiShotSet,config=customStrategyConfig){
   const available=availableCellsForGrid(grid,shotSet);
   if(available.length===0)return [undefined,undefined];
-  let best=available[0],bestScore=-Infinity;
-  available.forEach(([r,c])=>{
-    const score=scoreCustomCell(r,c,grid,shotSet,config);
+  const ctx=buildCustomShotContext(grid,shotSet);
+  let candidates=available;
+  if(ctx.cluster.length>0){
+    const lineEnds=getLineEndTargets(ctx.knowledgeGrid,shotSet,ctx.cluster);
+    const adjacent=adjacentHitTargets(ctx.knowledgeGrid,shotSet);
+    if(lineEnds.length>0)candidates=lineEnds;
+    else if(adjacent.length>0)candidates=adjacent;
+  }
+  let best=candidates[0],bestScore=-Infinity;
+  candidates.forEach(([r,c])=>{
+    const score=scoreCustomCell(r,c,grid,shotSet,config,ctx);
     if(score>bestScore){bestScore=score;best=[r,c];}
+    else if(score===bestScore&&centerWeight(r,c)>centerWeight(best[0],best[1]))best=[r,c];
   });
   return best;
 }
@@ -678,9 +710,12 @@ function runCustomStrategyTests(){
   const hitGrid=makeGrid();
   hitGrid[4][4]=3;
   const shotSet=new Set(['4,4']);
-  const next=chooseCustomShot(hitGrid,shotSet,{...config,hitPriority:Math.max(config.hitPriority,8),baseMode:'hunter',randomness:0});
+  const next=chooseCustomShot(hitGrid,shotSet,{...config,hitPriority:Math.max(config.hitPriority,8),baseMode:'hunter',randomness:0,densityWeight:Math.max(config.densityWeight??12,8)});
   const nearHit=Math.abs(next[0]-4)+Math.abs(next[1]-4)===1;
   results.push({ok:nearHit,text:'После попадания стратегия умеет выбирать соседнюю клетку.'});
+
+  const dense=chooseCustomShot(emptyGrid,emptyShotSet,{...config,densityWeight:20,randomness:0,parity:'any'});
+  results.push({ok:dense[0]>=0&&dense[1]>=0,text:'Плотность вероятности влияет на выбор клетки в режиме поиска.'});
 
   const fullShotSet=new Set();
   for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)fullShotSet.add(r+','+c);
@@ -924,7 +959,7 @@ document.getElementById('endNewGame').addEventListener('click',()=>{
 document.getElementById('btnCancelCustomStrategy').addEventListener('click',closeCustomStrategyModal);
 document.getElementById('btnRunCustomTests').addEventListener('click',runCustomStrategyTests);
 document.getElementById('btnSaveCustomStrategy').addEventListener('click',saveCustomStrategy);
-['customBaseMode','customParity','customHitPriority','customCenterWeight','customRandomness'].forEach(id=>{
+['customBaseMode','customParity','customHitPriority','customCenterWeight','customDensityWeight','customRandomness'].forEach(id=>{
   const field=document.getElementById(id);
   const onCustomFieldChange=()=>{
     updateCustomCodePreview();
