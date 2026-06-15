@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.db.models import Avg, Count, Sum
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -26,7 +26,38 @@ STRATEGY_LABELS = {
 
 def home(request):
     """Стартовая страница проекта"""
-    return render(request, 'game/home.html')
+    try:
+        return render(request, 'game/home.html')
+    except Exception:
+        messages.error(request, 'Не удалось открыть главную страницу.')
+        return HttpResponse('Главная страница временно недоступна.', status=500)
+
+
+def rules(request):
+    """Страница с правилами игры"""
+    try:
+        return render(request, 'game/rules.html')
+    except Exception:
+        messages.error(request, 'Не удалось открыть страницу правил.')
+        return redirect('game:home')
+
+
+def learning(request):
+    """Обучающий материал и выбор категории вопросов"""
+    try:
+        return render(request, 'game/learning.html')
+    except Exception:
+        messages.error(request, 'Не удалось открыть страницу выбора темы.')
+        return redirect('game:home')
+
+
+def index(request):
+    """Главная страница — игра"""
+    try:
+        return render(request, 'game/index.html')
+    except Exception:
+        messages.error(request, 'Не удалось открыть игру.')
+        return redirect('game:learning')
 
 
 @require_POST
@@ -104,21 +135,6 @@ def logout_user(request):
     logout(request)
     messages.success(request, 'Вы вышли из аккаунта.')
     return redirect('game:home')
-
-
-def rules(request):
-    """Страница с правилами игры"""
-    return render(request, 'game/rules.html')
-
-
-def learning(request):
-    """Обучающий материал и выбор категории вопросов"""
-    return render(request, 'game/learning.html')
-
-
-def index(request):
-    """Главная страница — игра"""
-    return render(request, 'game/index.html')
 
 
 def _build_player_stats(user):

@@ -314,4 +314,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     btn.addEventListener('click',()=>applyQuestionCategory(btn.dataset.questionCategory));
   });
   applyQuestionCategory(localStorage.getItem('questionCategory')||'Массивы');
+
+  const goToGame=document.getElementById('btnGoToGame');
+  if(goToGame){
+    goToGame.addEventListener('click',()=>{
+      localStorage.setItem('topicConfirmed','1');
+    });
+  }
 });

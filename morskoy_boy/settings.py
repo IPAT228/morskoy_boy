@@ -10,6 +10,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 IS_VERCEL = os.environ.get('VERCEL') == '1'
 
+if not IS_VERCEL:
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(BASE_DIR / '.env')
+    except ImportError:
+        pass
+
+from morskoy_boy.database import get_database_url
+
 SECRET_KEY = os.environ.get(
     'SECRET_KEY',
     'django-insecure-morskoy-boy-edu-game-2026-secret-key',
@@ -74,12 +84,25 @@ DB_PATH = os.environ.get('DATABASE_PATH')
 if not DB_PATH:
     DB_PATH = '/tmp/db.sqlite3' if IS_VERCEL else str(BASE_DIR / 'db.sqlite3')
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': DB_PATH,
+DATABASE_URL = get_database_url()
+
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        ),
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': DB_PATH,
+        }
+    }
 
 if IS_VERCEL:
     SESSION_COOKIE_SECURE = True

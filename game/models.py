@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -12,7 +13,12 @@ class QuestionCategory(models.Model):
         verbose_name_plural = 'Категории вопросов'
 
     def __str__(self):
-        return self.name
+        return self.name or 'Без названия'
+
+    def clean(self):
+        super().clean()
+        if not (self.name or '').strip():
+            raise ValidationError({'name': 'Название категории не может быть пустым.'})
 
 
 class Question(models.Model):
@@ -66,7 +72,25 @@ class Question(models.Model):
         verbose_name_plural = 'Вопросы'
 
     def __str__(self):
-        return f'[{self.get_difficulty_display()}] {self.text[:60]}...'
+        preview = (self.text or '')[:60]
+        if len(self.text or '') > 60:
+            preview += '…'
+        return f'[{self.get_difficulty_display()}] {preview or "Без текста"}'
+
+    def clean(self):
+        super().clean()
+        for field_name, label in (
+            ('text', 'Текст вопроса'),
+            ('option_a', 'Вариант A'),
+            ('option_b', 'Вариант B'),
+            ('option_c', 'Вариант C'),
+            ('option_d', 'Вариант D'),
+            ('explanation', 'Объяснение'),
+        ):
+            if not (getattr(self, field_name, '') or '').strip():
+                raise ValidationError({field_name: f'Поле «{label}» не может быть пустым.'})
+        if self.correct_answer not in ('A', 'B', 'C', 'D'):
+            raise ValidationError({'correct_answer': 'Правильный ответ должен быть A, B, C или D.'})
 
 
 class GameSession(models.Model):
@@ -116,3 +140,17 @@ class GameSession(models.Model):
         if not self.questions_answered:
             return 0
         return round(self.questions_correct / self.questions_answered * 100)
+
+    def clean(self):
+        super().clean()
+        for field_name in ('player_shots', 'ai_shots', 'player_hits', 'ai_hits',
+                           'questions_answered', 'questions_correct'):
+            value = getattr(self, field_name, 0)
+            if value is not None and value < 0:
+                raise ValidationError({field_name: 'Значение не может быть отрицательным.'})
+        if self.questions_correct > self.questions_answered:
+            raise ValidationError({
+                'questions_correct': 'Число правильных ответов не может превышать число отвеченных вопросов.',
+            })
+        if self.winner and self.winner not in ('player', 'ai'):
+            raise ValidationError({'winner': 'Победитель должен быть «player» или «ai».'})

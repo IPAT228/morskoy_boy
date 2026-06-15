@@ -41,8 +41,8 @@
             <article>
                 <h2>4. Искусственный интеллект</h2>
                 <p>
-                    Компьютер использует одну из стратегий: случайную, шахматную или
-                    «Охотник». Стратегии показывают разные алгоритмы поиска.
+                    Компьютер использует одну из стратегий: случайную, шахматную, «Охотник»,
+                    «Решатель» или вашу пользовательскую. Стратегии показывают разные алгоритмы поиска.
                 </p>
             </article>
             <article>
@@ -55,7 +55,7 @@
         </div>
 
         <div class="start-actions rules-actions">
-            <a class="btn btn-primary" href="{% url 'game:index' %}">Перейти к игре</a>
+            <a class="btn btn-primary" href="{% url 'game:learning' %}">Выбрать тему и играть</a>
             <a class="btn btn-success" href="{% url 'game:home' %}">На главную</a>
             <button class="btn theme-toggle-btn" type="button" data-theme-toggle aria-label="Включить светлую тему">☀</button>
         </div>

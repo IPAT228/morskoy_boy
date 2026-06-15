@@ -24,6 +24,14 @@ let customStrategyConfig = loadCustomStrategyConfig();
 let customStrategyTestPassed = false;
 let selectedQuestionCategory = localStorage.getItem('questionCategory') || 'Массивы';
 
+function ensureTopicSelectedBeforeGame(){
+  if(localStorage.getItem('topicConfirmed')!=='1'){
+    window.location.href='/learning/';
+    return false;
+  }
+  return true;
+}
+
 // --- Init ---
 function makeGrid(){return Array.from({length:SIZE},()=>Array(SIZE).fill(0));}
 function init(){
@@ -972,7 +980,9 @@ document.getElementById('btnSaveCustomStrategy').addEventListener('click',saveCu
 });
 
 // --- Start ---
-init();
+if(ensureTopicSelectedBeforeGame()){
+  init();
+}
 // venv\Scripts\python.exe manage.py runserver
 // http://127.0.0.1:8000/
 
