@@ -525,7 +525,7 @@ function saveCustomStrategy(){
 let questionPool=[];
 function fetchQuestions(){
   const category=encodeURIComponent(selectedQuestionCategory);
-  fetch(`/api/questions/?phase=all&count=50&category=${category}`)
+  fetch(`/api/questions/?phase=all&count=100&category=${category}`)
     .then(r=>r.json()).then(d=>{questionPool=d.questions||[];})
     .catch(()=>{questionPool=getFallbackQuestions();});
 }
