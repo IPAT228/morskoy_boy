@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Правила обучающей игры Морской бой">
+    <title>Морской Бой — правила</title>
+    <link rel="stylesheet" href="{% static 'game/css/style.css' %}?v={{ STATIC_VERSION }}">
+    <script src="{% static 'game/js/theme.js' %}?v={{ STATIC_VERSION }}"></script>
+</head>
+<body>
+<main class="rules-page">
+    <section class="glass-card rules-card">
+        <div class="start-kicker">Как играть</div>
+        <h1>Правила игры</h1>
+
+        <div class="rules-grid">
+            <article>
+                <h2>1. Расстановка</h2>
+                <p>
+                    Разместите корабли на своём поле 10×10 вручную или нажмите
+                    «Авто-расстановка». Корабли нельзя ставить вплотную друг к другу,
+                    даже по диагонали.
+                </p>
+            </article>
+            <article>
+                <h2>2. Бой</h2>
+                <p>
+                    Стреляйте по полю противника. При попадании ход остаётся за вами,
+                    при промахе ход переходит компьютеру.
+                </p>
+            </article>
+            <article>
+                <h2>3. Вопросы</h2>
+                <p>
+                    После промаха может появиться вопрос по информатике. Правильный
+                    ответ даёт шанс сделать дополнительный выстрел.
+                </p>
+            </article>
+            <article>
+                <h2>4. Искусственный интеллект</h2>
+                <p>
+                    Компьютер использует одну из стратегий: случайную, шахматную или
+                    «Охотник». Стратегии показывают разные алгоритмы поиска.
+                </p>
+            </article>
+            <article>
+                <h2>5. Победа</h2>
+                <p>
+                    Побеждает тот, кто первым уничтожит все корабли противника.
+                    В конце отображаются выстрелы, попадания и результат теста.
+                </p>
+            </article>
+        </div>
+
+        <div class="start-actions rules-actions">
+            <a class="btn btn-primary" href="{% url 'game:index' %}">Перейти к игре</a>
+            <a class="btn btn-success" href="{% url 'game:home' %}">На главную</a>
+            <button class="btn theme-toggle-btn" type="button" data-theme-toggle aria-label="Включить светлую тему">☀</button>
+        </div>
+    </section>
+</main>
+</body>
+</html>

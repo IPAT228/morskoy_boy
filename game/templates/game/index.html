@@ -1,0 +1,302 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Обучающая игра по информатике на основе Морского боя. Изучайте алгоритмы, массивы и Python играя!">
+    <title>Морской Бой — Обучающая игра по информатике</title>
+    <link rel="stylesheet" href="{% static 'game/css/style.css' %}?v={{ STATIC_VERSION }}">
+    <script src="{% static 'game/js/theme.js' %}?v={{ STATIC_VERSION }}"></script>
+</head>
+<body>
+
+<header class="app-header">
+    <div class="game-top-panel glass-card">
+        <a class="game-home-link" href="{% url 'game:home' %}">← На главную</a>
+        <button class="theme-toggle-btn game-theme-toggle" type="button" data-theme-toggle aria-label="Включить светлую тему">☀</button>
+        <div class="game-user-badge">
+            <span class="game-user-label">Игрок:</span>
+            <strong>
+                {% if user.is_authenticated %}
+                    {{ user.username }}
+                {% else %}
+                    Гость
+                {% endif %}
+            </strong>
+        </div>
+    </div>
+    <h1>⚓ Морской Бой</h1>
+    <p class="subtitle">Обучающая игра по информатике — алгоритмы, массивы и Python</p>
+</header>
+
+<div class="game-container">
+
+    <!-- Phase indicator -->
+    <div class="phase-indicator">
+        <span id="phaseBadge" class="phase-badge phase-placement">
+            🚢 Расстановка кораблей
+        </span>
+    </div>
+
+    <!-- Top bar: Strategy + Stats -->
+    <div class="top-bar">
+        <div class="glass-card strategy-card">
+            <div class="card-title">🤖 Стратегия противника</div>
+            <div class="strategy-buttons">
+                <button class="strategy-btn active" data-strategy="random" id="stratRandom">Случайный</button>
+                <button class="strategy-btn" data-strategy="checkerboard" id="stratChecker">Шахматный</button>
+                <button class="strategy-btn" data-strategy="hunter" id="stratHunter">Охотник</button>
+                <button class="strategy-btn" data-strategy="custom" id="stratCustom">Пользовательский</button>
+            </div>
+        </div>
+        <div class="glass-card stats-card">
+            <div class="card-title">📊 Статистика боя</div>
+            <div class="stats-row">
+                <div class="stat-item">
+                    <span class="stat-value" id="statPlayerShots">0</span>
+                    <span class="stat-label">Ваши выстрелы</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="statPlayerHits">0</span>
+                    <span class="stat-label">Попадания</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="statAiShots">0</span>
+                    <span class="stat-label">Выстрелы противника</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="statAiHits">0</span>
+                    <span class="stat-label">Попадания противника</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="statQuizScore">0/0</span>
+                    <span class="stat-label">Тест</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Area: Player Board | Matrix/Log | AI Board -->
+    <div class="main-area">
+        <!-- Player board -->
+        <div class="board-section">
+            <div class="board-label">Ваше поле <span>(оборона)</span></div>
+            <div class="board-wrapper">
+                <div class="board-coords-top" id="playerCoordsTop"></div>
+                <div class="board-body">
+                    <div class="board-coords-left" id="playerCoordsLeft"></div>
+                    <div class="board-grid" id="playerBoard"></div>
+                </div>
+            </div>
+            <div id="placementInfo" class="placement-info">
+                <strong id="placementShipName">4-палубный корабль</strong> — нажмите на клетку
+                <div class="hint">Нажмите <kbd>R</kbd> или правую кнопку мыши для поворота</div>
+            </div>
+        </div>
+
+        <!-- Center column: matrix + AI explanation + log -->
+        <div class="center-column">
+            <div class="glass-card matrix-card">
+                <div class="card-title">📋 Визуализация данных — Матрица поля противника</div>
+                <table class="matrix-table" id="matrixTable"></table>
+                <div class="matrix-legend">
+                    <div class="legend-item"><div class="legend-color" style="background:var(--text-muted)"></div> 0=пусто</div>
+                    <div class="legend-item"><div class="legend-color" style="background:var(--accent-blue)"></div> 1=корабль</div>
+                    <div class="legend-item"><div class="legend-color" style="background:var(--miss)"></div> 2=промах</div>
+                    <div class="legend-item"><div class="legend-color" style="background:var(--accent-red)"></div> 3=попадание</div>
+                </div>
+            </div>
+
+            <div class="glass-card ai-card">
+                <div class="card-title">💡 Объяснение алгоритма</div>
+                <div class="ai-explanation" id="aiExplanation">
+                    <strong>Случайный алгоритм:</strong> Компьютер выбирает случайную клетку из ещё не обстрелянных.
+                    Это самый простой подход — как перебор элементов массива в случайном порядке.
+                    Эффективность: низкая, среднее количество выстрелов ~95 из 100.
+                </div>
+            </div>
+
+            <div class="glass-card log-card">
+                <div class="card-title">📜 Журнал боя</div>
+                <div class="log-entries" id="logEntries">
+                    <div class="log-entry">Игра готова. Расставьте корабли!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI board -->
+        <div class="board-section">
+            <div class="board-label">Поле противника <span>(атака)</span></div>
+            <div class="board-wrapper">
+                <div class="board-coords-top" id="aiCoordsTop"></div>
+                <div class="board-body">
+                    <div class="board-coords-left" id="aiCoordsLeft"></div>
+                    <div class="board-grid" id="aiBoard"></div>
+                </div>
+            </div>
+            <div class="turn-indicator" id="turnIndicator"></div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-bar">
+        <button class="btn btn-success" id="btnAutoPlace" title="Автоматическая расстановка">🎲 Авто-расстановка</button>
+        <button class="btn btn-primary hidden" id="btnStartBattle">⚔️ Начать бой!</button>
+        <button class="btn btn-danger hidden" id="btnNewGame">🔄 Новая игра</button>
+    </div>
+
+</div>
+
+<!-- Custom Strategy Modal -->
+<div class="modal-overlay hidden" id="customStrategyModal">
+    <div class="modal custom-strategy-modal">
+        <div class="modal-title">
+            <span class="icon">🧩</span>
+            Конструктор пользовательской стратегии
+            <span class="modal-badge badge-medium">Противник</span>
+        </div>
+
+        <p class="custom-strategy-intro">
+            Настройте функцию выбора выстрела. Стратегия получает матрицу поля, список уже сделанных выстрелов
+            и возвращает координаты следующей клетки для атаки.
+        </p>
+
+        <div class="custom-logic-note">
+            Логика функции: противник перебирает все свободные клетки поля и для каждой рассчитывает score — числовую оценку
+            выгодности выстрела. На score влияют выбранная чётность, близость клетки к центру, соседство с уже найденным
+            попаданием и уровень случайности. После расчёта стратегия выбирает клетку с максимальным score. Перед сохранением
+            тесты проверяют, что функция возвращает допустимые координаты, не повторяет выстрелы и корректно реагирует на попадание.
+        </div>
+
+        <div class="custom-strategy-toolbar">
+            <button class="btn btn-success" id="btnRunCustomTests" type="button">▶ Запустить тесты</button>
+            <span class="custom-test-status" id="customTestStatus">Тесты ещё не запускались</span>
+        </div>
+
+        <div class="custom-strategy-grid">
+            <section class="custom-builder-panel">
+                <div class="card-title">Конструктор переменных</div>
+
+                <label class="custom-field">
+                    База функции
+                    <select id="customBaseMode">
+                        <option value="weighted">Взвешенная оценка клеток</option>
+                        <option value="checker">Шахматный шаблон</option>
+                        <option value="hunter">Охота после попадания</option>
+                    </select>
+                    <span>Определяет, от какой логики отталкивается пользовательская стратегия.</span>
+                </label>
+
+                <label class="custom-field">
+                    Чётность клеток
+                    <select id="customParity">
+                        <option value="any">Любые клетки</option>
+                        <option value="even">Только чётные (r + c) % 2 = 0</option>
+                        <option value="odd">Только нечётные (r + c) % 2 = 1</option>
+                    </select>
+                    <span>Позволяет имитировать шахматный обход поля.</span>
+                </label>
+
+                <label class="custom-field">
+                    Приоритет соседей после попадания
+                    <input id="customHitPriority" type="number" min="0" max="20" step="1" value="8">
+                    <span>Чем выше значение, тем быстрее противник проверяет клетки рядом с уже найденным кораблём.</span>
+                </label>
+
+                <label class="custom-field">
+                    Вес центра поля
+                    <input id="customCenterWeight" type="number" min="-10" max="10" step="1" value="2">
+                    <span>Положительное значение чаще выбирает центральные клетки, отрицательное — края.</span>
+                </label>
+
+                <label class="custom-field">
+                    Случайность
+                    <input id="customRandomness" type="number" min="0" max="10" step="1" value="3">
+                    <span>Добавляет разброс, чтобы стратегия не стреляла всегда одинаково.</span>
+                </label>
+            </section>
+
+            <section class="custom-code-panel">
+                <div class="card-title">Функция стратегии</div>
+                <div class="custom-code-block">
+<span class="code-keyword">function</span> <span class="code-function">scoreCustomCell</span>(r, c, grid, shotSet, config) {
+  <span class="code-keyword">let</span> score = <span class="code-number">0</span>;
+  <span class="code-keyword">const</span> baseMode = <span class="code-param code-string" id="codeBaseMode">'weighted'</span>;
+  <span class="code-keyword">const</span> parity = <span class="code-param code-string" id="codeParity">'any'</span>;
+  <span class="code-keyword">const</span> hitPriority = <span class="code-param code-number" id="codeHitPriority">8</span>;
+  <span class="code-keyword">const</span> centerWeight = <span class="code-param code-number" id="codeCenterWeight">2</span>;
+  <span class="code-keyword">const</span> randomness = <span class="code-param code-number" id="codeRandomness">3</span>;
+
+  <span class="code-keyword">if</span> (parity === <span class="code-string">'even'</span> &amp;&amp; (r + c) % <span class="code-number">2</span> !== <span class="code-number">0</span>) score -= <span class="code-number">8</span>;
+  <span class="code-keyword">if</span> (parity === <span class="code-string">'odd'</span> &amp;&amp; (r + c) % <span class="code-number">2</span> !== <span class="code-number">1</span>) score -= <span class="code-number">8</span>;
+  <span class="code-keyword">if</span> (baseMode === <span class="code-string">'checker'</span> &amp;&amp; (r + c) % <span class="code-number">2</span> === <span class="code-number">0</span>) score += <span class="code-number">4</span>;
+
+  <span class="code-keyword">const</span> centerDistance = Math.abs(r - <span class="code-number">4.5</span>) + Math.abs(c - <span class="code-number">4.5</span>);
+  score += (<span class="code-number">9</span> - centerDistance) * centerWeight;
+
+  <span class="code-keyword">const</span> nearHit = <span class="code-function">adjacentHitTargets</span>(grid, shotSet).some(([nr, nc]) =&gt; nr === r &amp;&amp; nc === c);
+  <span class="code-keyword">if</span> (nearHit) score += hitPriority * <span class="code-number">5</span>;
+
+  score += Math.random() * randomness;
+  <span class="code-keyword">return</span> score;
+}
+                </div>
+
+                <div class="custom-vars-help">
+                    <div><strong>board</strong> — состояние вашего поля: 0 пусто, 2 промах, 3 попадание, 4 потоплено.</div>
+                    <div><strong>shots</strong> — координаты, куда противник уже стрелял; повторять их нельзя.</div>
+                    <div><strong>score</strong> — итоговый балл клетки. Противник стреляет туда, где балл больше.</div>
+                </div>
+            </section>
+        </div>
+
+        <section class="custom-test-results" id="customTestResults">
+            <div class="card-title">Результаты тестов</div>
+            <div class="custom-test-empty">Запустите тесты, чтобы проверить стратегию перед сохранением.</div>
+        </section>
+
+        <div class="modal-footer custom-strategy-footer">
+            <button class="btn btn-danger" id="btnCancelCustomStrategy" type="button">Отмена</button>
+            <button class="btn btn-primary" id="btnSaveCustomStrategy" type="button" disabled>Сохранить стратегию</button>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz Modal -->
+<div class="modal-overlay hidden" id="quizModal">
+    <div class="modal">
+        <div class="modal-title">
+            <span class="icon">🧠</span>
+            Вопрос по информатике
+            <span class="modal-badge" id="quizBadge">лёгкий</span>
+        </div>
+        <div class="question-text" id="quizQuestionText"></div>
+        <div class="code-block hidden" id="quizCodeBlock"></div>
+        <div class="options-list" id="quizOptions"></div>
+        <div class="explanation-box" id="quizExplanation"></div>
+        <div class="modal-footer">
+            <button class="btn btn-primary hidden" id="quizContinue">Продолжить ➜</button>
+        </div>
+    </div>
+</div>
+
+<!-- End Game Modal -->
+<div class="modal-overlay hidden" id="endModal">
+    <div class="modal end-modal">
+        <div class="result-icon" id="endIcon"></div>
+        <div class="result-title" id="endTitle"></div>
+        <div class="end-stats" id="endStats"></div>
+        <div class="postmortem-section hidden" id="postmortemSection">
+            <h4>🎓 Финальное задание</h4>
+            <div id="postmortemContent"></div>
+        </div>
+        <div class="modal-footer" style="margin-top:16px">
+            <button class="btn btn-primary" id="endNewGame">🔄 Новая игра</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'game/js/game.js' %}?v={{ STATIC_VERSION }}"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Стартовая страница обучающей игры Морской бой">
+    <title>Морской Бой — старт</title>
+    <link rel="stylesheet" href="{% static 'game/css/style.css' %}?v={{ STATIC_VERSION }}">
+    <script src="{% static 'game/js/theme.js' %}?v={{ STATIC_VERSION }}"></script>
+</head>
+<body>
+<main class="start-page">
+    <section class="start-hero glass-card">
+        <div class="start-kicker">Обучающая игра по информатике</div>
+        <h1>Морской Бой</h1>
+        <p>
+            Сражайтесь с компьютерным противником, отвечайте на вопросы по Python
+            и изучайте алгоритмы на примере классической игры.
+        </p>
+        <div class="start-actions">
+            <a class="btn btn-primary" href="{% url 'game:learning' %}">Начать игру</a>
+            <a class="btn btn-success" href="{% url 'game:rules' %}">Правила игры</a>
+            <button class="btn theme-toggle-btn" type="button" data-theme-toggle aria-label="Включить светлую тему">☀</button>
+            {% if not user.is_authenticated %}
+                <a class="btn admin-login-btn" href="/admin/">
+                    <span class="admin-login-icon">⚙</span>
+                    Войти как администратор
+                </a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="start-panel glass-card">
+        <div class="card-title">Аккаунт игрока</div>
+
+        {% if messages %}
+            <div class="form-messages">
+                {% for message in messages %}
+                    <div class="form-message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+            <p class="start-note">
+                Вы вошли как <strong>{{ user.username }}</strong>.
+            </p>
+            <div class="account-actions">
+                <a class="btn btn-primary full-width" href="{% url 'game:learning' %}">Перейти к игре</a>
+                {% if user.is_staff %}
+                    <a class="btn admin-login-btn full-width" href="/admin/">
+                        <span class="admin-login-icon">⚙</span>
+                        Админ-панель
+                    </a>
+                {% endif %}
+                <form method="post" action="{% url 'game:logout' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-danger full-width" type="submit">Выйти</button>
+                </form>
+            </div>
+        {% else %}
+            <form class="register-form auth-form" method="post" action="{% url 'game:login' %}">
+                {% csrf_token %}
+                <div class="form-section-title">Вход</div>
+                <label>
+                    Имя пользователя
+                    <input type="text" name="username" placeholder="Ваш логин" required>
+                </label>
+                <label>
+                    Пароль
+                    <input type="password" name="password" placeholder="Ваш пароль" required>
+                </label>
+                <button class="btn btn-primary full-width" type="submit">Войти</button>
+            </form>
+
+            <details class="registration-toggle">
+                <summary class="btn btn-success full-width">Регистрация</summary>
+                <form class="register-form auth-form" method="post" action="{% url 'game:register' %}">
+                    {% csrf_token %}
+                    <label>
+                        Имя пользователя
+                        <input type="text" name="username" placeholder="Например: player1" required>
+                    </label>
+                    <label>
+                        Пароль
+                        <input type="password" name="password" placeholder="Введите пароль" required>
+                    </label>
+                    <label>
+                        Повторите пароль
+                        <input type="password" name="password_confirm" placeholder="Повторите пароль" required>
+                    </label>
+                    <button class="btn btn-primary full-width" type="submit">Зарегистрироваться и играть</button>
+                </form>
+            </details>
+        {% endif %}
+    </section>
+</main>
+</body>
+</html>

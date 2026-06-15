@@ -1,0 +1,524 @@
+:root {
+    --primary: #06b6d4;
+    --secondary: #3b82f6;
+    --accent: #06b6d4;
+    --primary-fg: #f0f4ff;
+    --body-bg: #0a0e1a;
+    --body-fg: #f0f4ff;
+    --body-quiet-color: #94a3b8;
+    --body-loud-color: #f0f4ff;
+    --header-bg: #111827;
+    --header-color: #f0f4ff;
+    --header-branding-color: #06b6d4;
+    --header-link-color: #f0f4ff;
+    --breadcrumbs-bg: #0c2d48;
+    --breadcrumbs-fg: #94a3b8;
+    --breadcrumbs-link-fg: #06b6d4;
+    --link-fg: #06b6d4;
+    --link-hover-color: #38bdf8;
+    --hairline-color: rgba(255, 255, 255, 0.08);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --darkened-bg: #111827;
+    --selected-bg: rgba(6, 182, 212, 0.14);
+    --selected-row: rgba(6, 182, 212, 0.1);
+    --button-fg: #f0f4ff;
+    --button-bg: rgba(6, 182, 212, 0.18);
+    --button-hover-bg: rgba(6, 182, 212, 0.28);
+    --default-button-bg: rgba(6, 182, 212, 0.24);
+    --default-button-hover-bg: rgba(6, 182, 212, 0.34);
+    --delete-button-bg: rgba(239, 68, 68, 0.2);
+    --delete-button-hover-bg: rgba(239, 68, 68, 0.3);
+}
+
+body {
+    background: #0a0e1a;
+    color: #f0f4ff;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Keep Django admin layout intact; only theme the surface. */
+#header {
+    border-bottom: 1px solid rgba(6, 182, 212, 0.18);
+    background: rgba(17, 24, 39, 0.96);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+    padding-right: 82px;
+}
+
+#branding h1,
+#branding h1 a:link,
+#branding h1 a:visited,
+#site-name,
+#site-name a,
+#header #site-name a:link,
+#header #site-name a:visited {
+    color: #06b6d4;
+    font-weight: 800;
+    text-decoration: none;
+    text-shadow: 0 0 18px rgba(6, 182, 212, 0.22);
+}
+
+.admin-game-links {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-left: 16px;
+}
+
+#user-tools {
+    display: none;
+}
+
+.admin-game-links a,
+.admin-game-links button,
+#user-tools a,
+#logout-form button {
+    border: 1px solid rgba(6, 182, 212, 0.22);
+    border-radius: 8px;
+    background: rgba(6, 182, 212, 0.08);
+    color: #f0f4ff !important;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.admin-game-links a {
+    padding: 7px 11px;
+}
+
+.admin-game-links button {
+    padding: 7px 11px;
+    cursor: pointer;
+}
+
+.admin-game-links form {
+    display: inline-flex;
+}
+
+[data-theme-toggle] {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 1200;
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid rgba(6, 182, 212, 0.34);
+    border-radius: 50%;
+    background: rgba(10, 14, 26, 0.86);
+    color: #f8fafc !important;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow:
+        0 12px 34px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+#logout-form button {
+    padding: 7px 11px;
+}
+
+.admin-game-links a:hover,
+.admin-game-links button:hover,
+#user-tools a:hover,
+#logout-form button:hover {
+    background: rgba(6, 182, 212, 0.16);
+    color: #ffffff !important;
+}
+
+.theme-toggle {
+    display: none !important;
+}
+
+div.breadcrumbs {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(12, 45, 72, 0.55);
+}
+
+#content h1 {
+    color: #06b6d4;
+    font-weight: 800;
+    text-shadow: 0 0 18px rgba(6, 182, 212, 0.18);
+}
+
+.module,
+.inline-group,
+#changelist,
+.submit-row {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    background: rgba(17, 24, 39, 0.86);
+    box-shadow:
+        0 18px 48px rgba(0, 0, 0, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+    background: rgba(12, 45, 72, 0.55);
+    color: #06b6d4;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.form-row,
+td,
+th {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+label,
+required label,
+.aligned label {
+    color: #f0f4ff;
+}
+
+.help,
+.helptext,
+.quiet,
+.readonly {
+    color: #94a3b8 !important;
+}
+
+input,
+textarea,
+select,
+.vTextField {
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+    background: rgba(12, 45, 72, 0.46);
+    color: #f0f4ff;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.vTextField:focus {
+    border-color: #06b6d4;
+    outline: none;
+    box-shadow: 0 0 18px rgba(6, 182, 212, 0.22);
+}
+
+select option {
+    background: #111827;
+    color: #f0f4ff;
+}
+
+.button,
+input[type=submit],
+input[type=button],
+.submit-row input,
+a.button,
+.object-tools a {
+    border: 1px solid rgba(6, 182, 212, 0.28);
+    border-radius: 8px;
+    background: rgba(6, 182, 212, 0.18);
+    color: #f0f4ff;
+    font-weight: 800;
+}
+
+a.addlink,
+.object-tools a.addlink,
+td a.addlink,
+.related-widget-wrapper-link.add-related {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 34px !important;
+    padding: 7px 12px !important;
+    border: 1px solid rgba(6, 182, 212, 0.28) !important;
+    border-radius: 8px !important;
+    background: rgba(6, 182, 212, 0.12) !important;
+    color: #f0f4ff !important;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-size: 0.82rem !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    text-decoration: none !important;
+    text-transform: none !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
+}
+
+a.addlink:hover,
+.object-tools a.addlink:hover,
+td a.addlink:hover,
+.related-widget-wrapper-link.add-related:hover {
+    background: rgba(6, 182, 212, 0.2) !important;
+    color: #ffffff !important;
+}
+
+.related-widget-wrapper-link.add-related img {
+    display: none !important;
+}
+
+.related-widget-wrapper-link.add-related::after {
+    content: "Добавить";
+}
+
+.deletelink,
+.submit-row a.deletelink,
+input[type=submit].deletelink {
+    border: 1px solid rgba(239, 68, 68, 0.34);
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.16);
+    color: #fecaca !important;
+    font-weight: 800;
+}
+
+.deletelink:hover,
+.submit-row a.deletelink:hover,
+input[type=submit].deletelink:hover {
+    background: rgba(239, 68, 68, 0.26);
+    color: #ffffff !important;
+}
+
+.button:hover,
+input[type=submit]:hover,
+input[type=button]:hover,
+.submit-row input:hover,
+a.button:hover,
+.object-tools a:hover {
+    background: rgba(6, 182, 212, 0.28);
+}
+
+a:link,
+a:visited {
+    color: #06b6d4;
+}
+
+a:hover {
+    color: #38bdf8;
+}
+
+:root[data-theme="light"] {
+    --body-bg: #f6f9ff;
+    --body-fg: #102033;
+    --body-quiet-color: #475569;
+    --body-loud-color: #102033;
+    --header-bg: #ffffff;
+    --header-color: #102033;
+    --breadcrumbs-bg: #e2f2fc;
+    --breadcrumbs-fg: #475569;
+    --darkened-bg: #ffffff;
+    --selected-bg: rgba(6, 182, 212, 0.12);
+    --button-fg: #102033;
+}
+
+:root[data-theme="light"] body {
+    background: #f6f9ff;
+    color: #102033;
+}
+
+:root[data-theme="light"] #header,
+:root[data-theme="light"] .module,
+:root[data-theme="light"] .inline-group,
+:root[data-theme="light"] #changelist,
+:root[data-theme="light"] .submit-row {
+    background: rgba(255, 255, 255, 0.86);
+    border-color: rgba(15, 23, 42, 0.12);
+    box-shadow: 0 16px 42px rgba(15, 23, 42, 0.1);
+}
+
+:root[data-theme="light"] div.breadcrumbs,
+:root[data-theme="light"] .module h2,
+:root[data-theme="light"] .module caption,
+:root[data-theme="light"] .inline-group h2 {
+    background: rgba(226, 242, 252, 0.74);
+    border-color: rgba(15, 23, 42, 0.1);
+}
+
+:root[data-theme="light"] label,
+:root[data-theme="light"] required label,
+:root[data-theme="light"] .aligned label,
+:root[data-theme="light"] td,
+:root[data-theme="light"] th {
+    color: #102033;
+}
+
+:root[data-theme="light"] input,
+:root[data-theme="light"] textarea,
+:root[data-theme="light"] select,
+:root[data-theme="light"] .vTextField {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(15, 23, 42, 0.16);
+    color: #102033;
+}
+
+:root[data-theme="light"] select option {
+    background: #ffffff;
+    color: #102033;
+}
+
+:root[data-theme="light"] .admin-game-links a,
+:root[data-theme="light"] .admin-game-links button,
+:root[data-theme="light"] #user-tools a,
+:root[data-theme="light"] #logout-form button {
+    background: rgba(6, 182, 212, 0.08);
+    color: #102033 !important;
+}
+
+:root[data-theme="light"] #header,
+:root[data-theme="light"] #user-tools,
+:root[data-theme="light"] #user-tools strong,
+:root[data-theme="light"] #user-tools button,
+:root[data-theme="light"] #branding h1,
+:root[data-theme="light"] #branding h1 a:link,
+:root[data-theme="light"] #branding h1 a:visited,
+:root[data-theme="light"] #site-name,
+:root[data-theme="light"] #site-name a {
+    color: #102033 !important;
+}
+
+:root[data-theme="light"] #branding h1 a,
+:root[data-theme="light"] #site-name a,
+:root[data-theme="light"] #content h1,
+:root[data-theme="light"] .module h2,
+:root[data-theme="light"] .module caption,
+:root[data-theme="light"] .inline-group h2 {
+    color: #075985 !important;
+    text-shadow: none;
+}
+
+:root[data-theme="light"] a:link,
+:root[data-theme="light"] a:visited {
+    color: #0369a1;
+}
+
+:root[data-theme="light"] a:hover {
+    color: #0f172a;
+}
+
+:root[data-theme="light"] .help,
+:root[data-theme="light"] .helptext,
+:root[data-theme="light"] .quiet,
+:root[data-theme="light"] .readonly,
+:root[data-theme="light"] .paginator,
+:root[data-theme="light"] .small,
+:root[data-theme="light"] p.datetime {
+    color: #475569 !important;
+}
+
+:root[data-theme="light"] #changelist table tbody tr,
+:root[data-theme="light"] #changelist table tbody tr:nth-child(even),
+:root[data-theme="light"] .row1,
+:root[data-theme="light"] .row2 {
+    background: rgba(255, 255, 255, 0.82);
+    color: #102033;
+}
+
+:root[data-theme="light"] #changelist table tbody tr:hover {
+    background: rgba(226, 242, 252, 0.72);
+}
+
+:root[data-theme="light"] .messagelist li,
+:root[data-theme="light"] ul.messagelist li {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #065f46;
+    border-color: rgba(5, 150, 105, 0.28);
+}
+
+:root[data-theme="light"] .errornote,
+:root[data-theme="light"] ul.errorlist li {
+    background: rgba(220, 38, 38, 0.1);
+    border-color: rgba(185, 28, 28, 0.34);
+    color: #991b1b;
+}
+
+:root[data-theme="light"] [data-theme-toggle] {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(15, 23, 42, 0.16);
+    color: #0f172a !important;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+}
+
+:root[data-theme="light"] .button,
+:root[data-theme="light"] input[type=submit],
+:root[data-theme="light"] input[type=button],
+:root[data-theme="light"] .submit-row input,
+:root[data-theme="light"] a.button,
+:root[data-theme="light"] .object-tools a {
+    background: rgba(6, 182, 212, 0.12);
+    border-color: rgba(8, 145, 178, 0.34);
+    color: #0f172a;
+}
+
+:root[data-theme="light"] a.addlink,
+:root[data-theme="light"] .object-tools a.addlink,
+:root[data-theme="light"] td a.addlink,
+:root[data-theme="light"] .related-widget-wrapper-link.add-related {
+    background: rgba(6, 182, 212, 0.1) !important;
+    border-color: rgba(8, 145, 178, 0.34) !important;
+    color: #0f172a !important;
+}
+
+:root[data-theme="light"] a.addlink:hover,
+:root[data-theme="light"] .object-tools a.addlink:hover,
+:root[data-theme="light"] td a.addlink:hover,
+:root[data-theme="light"] .related-widget-wrapper-link.add-related:hover {
+    background: rgba(6, 182, 212, 0.18) !important;
+    color: #075985 !important;
+}
+
+:root[data-theme="light"] .deletelink,
+:root[data-theme="light"] .submit-row a.deletelink,
+:root[data-theme="light"] input[type=submit].deletelink,
+:root[data-theme="light"] .delete-confirmation input[type=submit] {
+    background: rgba(220, 38, 38, 0.12);
+    border-color: rgba(185, 28, 28, 0.42);
+    color: #991b1b !important;
+}
+
+:root[data-theme="light"] .deletelink:hover,
+:root[data-theme="light"] .submit-row a.deletelink:hover,
+:root[data-theme="light"] input[type=submit].deletelink:hover,
+:root[data-theme="light"] .delete-confirmation input[type=submit]:hover {
+    background: rgba(220, 38, 38, 0.2);
+    color: #7f1d1d !important;
+}
+
+.theme-switcher-floating {
+    position: fixed !important;
+    top: 18px !important;
+    right: 18px !important;
+    left: auto !important;
+    bottom: auto !important;
+    z-index: 9999 !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    width: 46px !important;
+    min-width: 46px !important;
+    max-width: 46px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid rgba(6, 182, 212, 0.38) !important;
+    border-radius: 999px !important;
+    background: rgba(10, 14, 26, 0.9) !important;
+    color: #f8fafc !important;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-size: 1.22rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    box-shadow:
+        0 14px 34px rgba(0, 0, 0, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+    cursor: pointer !important;
+}
+
+:root[data-theme="light"] .theme-switcher-floating {
+    background: rgba(255, 255, 255, 0.94) !important;
+    border-color: rgba(15, 23, 42, 0.18) !important;
+    color: #0f172a !important;
+    box-shadow:
+        0 14px 34px rgba(15, 23, 42, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+}

@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | Морской Бой{% endblock %}
+
+{% block dark-mode-vars %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'game/css/admin-internal.css' %}?v={{ STATIC_VERSION }}">
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'game/js/theme.js' %}?v={{ STATIC_VERSION }}"></script>
+<script src="{% static 'game/js/admin-ui.js' %}?v={{ STATIC_VERSION }}"></script>
+{% endblock %}
+
+{% block branding %}
+{% endblock %}
+
+{% block nav-global %}
+<div class="admin-game-links">
+    <a href="{% url 'game:home' %}">Главная</a>
+    <form id="logout-form" method="post" action="{% url 'admin:logout' %}">
+        {% csrf_token %}
+        <button type="submit">Выйти</button>
+    </form>
+    <a href="{% url 'game:index' %}">Игра</a>
+    <a href="{% url 'game:rules' %}">Правила</a>
+    <button type="button" data-theme-toggle aria-label="Включить светлую тему">☀</button>
+</div>
+{% endblock %}
+
+{% block welcome-msg %}{% endblock %}
+
+{% block userlinks %}
+{% endblock %}

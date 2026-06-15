@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Обучающий материал и выбор категории вопросов перед игрой Морской бой">
+    <title>Морской Бой — обучение перед игрой</title>
+    <link rel="stylesheet" href="{% static 'game/css/style.css' %}?v={{ STATIC_VERSION }}">
+    <script src="{% static 'game/js/theme.js' %}?v={{ STATIC_VERSION }}"></script>
+</head>
+<body>
+<main class="learning-page">
+    <section class="glass-card learning-card learning-page-card">
+        <div class="game-top-panel glass-card">
+            <a class="game-home-link" href="{% url 'game:home' %}">← На главную</a>
+            <button class="theme-toggle-btn game-theme-toggle" type="button" data-theme-toggle aria-label="Включить светлую тему">☀</button>
+            <a class="game-home-link" href="{% url 'game:rules' %}">Правила</a>
+        </div>
+
+        <div class="learning-header">
+            <div>
+                <div class="card-title">📚 Обучающий материал перед игрой</div>
+                <h1>Выберите тему вопросов</h1>
+            </div>
+            <div class="learning-selected" id="selectedCategoryLabel">Тема: Массивы</div>
+        </div>
+
+        <p class="learning-intro">
+            Перед началом боя выберите раздел информатики. После выстрелов и игровых событий вопросы будут подбираться
+            по выбранной теме, чтобы игра закрепляла конкретный учебный материал.
+        </p>
+
+        <div class="learning-categories" role="group" aria-label="Категория вопросов">
+            <button class="learning-category active" type="button" data-question-category="Массивы">
+                <span>Массивы</span>
+                <small>Хранение поля, индексы, матрица 10×10.</small>
+            </button>
+            <button class="learning-category" type="button" data-question-category="Циклы">
+                <span>Циклы</span>
+                <small>Перебор клеток, повторение действий, обход поля.</small>
+            </button>
+            <button class="learning-category" type="button" data-question-category="Условия">
+                <span>Условия</span>
+                <small>Проверка попаданий, границ и правил расстановки.</small>
+            </button>
+            <button class="learning-category" type="button" data-question-category="Функции">
+                <span>Функции</span>
+                <small>Разделение логики игры на отдельные действия.</small>
+            </button>
+            <button class="learning-category" type="button" data-question-category="Алгоритмы">
+                <span>Алгоритмы</span>
+                <small>Стратегии ИИ, поиск цели и выбор лучшего хода.</small>
+            </button>
+        </div>
+
+        <article class="learning-article learning-docs" id="learningArticle">
+            <aside class="learning-docs-nav" aria-label="Разделы темы"></aside>
+            <div class="learning-docs-content"></div>
+        </article>
+
+        <div class="learning-actions">
+            <a class="btn btn-primary" href="{% url 'game:index' %}">Перейти к расстановке кораблей</a>
+            <span class="learning-action-note">Выбранная тема сохранится и будет использоваться для вопросов в бою.</span>
+        </div>
+    </section>
+</main>
+<script src="{% static 'game/js/learning.js' %}?v={{ STATIC_VERSION }}"></script>
+</body>
+</html>
